@@ -1,7 +1,8 @@
 import csv
+
 import spacy
 
-from data_assignment import DataAssignment
+from classes.data_assignment import DataAssignment
 
 # read data
 # ...

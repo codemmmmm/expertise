@@ -1,10 +1,11 @@
-from spacy import Language
-from spacy.tokens import Doc
-from enum import Enum
 import re
 from collections.abc import Iterable
+from enum import Enum
 
-from person import Person
+from spacy import Language
+from spacy.tokens import Doc
+
+from classes.person import Person
 
 class SourceRows(Enum):
     NAME = 0
@@ -96,7 +97,7 @@ class DataAssignment:  # better name??? mapping?
     def _get_regex_pattern(delimiters: Iterable[str]):
         return "|".join(map(re.escape, delimiters))
 
-    def _get_docs_indices(self, row: str, source_column: SourceRows, delimiters: Iterable[str]) -> list[Doc]:
+    def _get_docs_indices(self, row: list[str], source_column: SourceRows, delimiters: Iterable[str]) -> list[Doc]:
         entries = row[source_column.value]
         if not self._is_empty(entries):
             indices = []
