@@ -21,12 +21,6 @@ from classes.data_assignment import DataAssignment
     # what to do with abbreviations in braces (ABK)
 #
 
-def tokenize(column: str, xxx) -> list[str]:
-    # if not "---" or ""
-    # different functions for each column...
-    # also do nlp()?
-    return
-
 def main() -> int:
     spacy_model_name = "en_core_web_md"
     nlp = spacy.load(spacy_model_name)

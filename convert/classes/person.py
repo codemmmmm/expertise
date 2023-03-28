@@ -10,14 +10,14 @@ class Person:
         self._title = title
         self._name = name
         self._email = email
-        self._interests_ids = []
-        self._institutes_ids = []
-        self._faculties_ids = []
-        self._departments_ids = []
-        self._advisors_ids = []
-        self._roles_ids = []
-        self._offered_expertise_ids = []
-        self._wanted_expertise_ids = []
+        self._interests_ids: list[int] = []
+        self._institutes_ids: list[int] = []
+        self._faculties_ids: list[int] = []
+        self._departments_ids: list[int] = []
+        self._advisors_ids: list[int] = []
+        self._roles_ids: list[int] = []
+        self._offered_expertise_ids: list[int] = []
+        self._wanted_expertise_ids: list[int] = []
         self._comment = comment
         # self._score with bit flag (enums)?
         # should it rate the value that was in the table row or

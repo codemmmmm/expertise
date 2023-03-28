@@ -29,13 +29,13 @@ class DataAssignment:  # better name??? mapping?
         self._persons = []
         # is there a better type than lists? like dicts or sets
         # after adding all entries the lists must not be changed (appended, removed)
-        self._interests = []
-        self._institutes = []
-        self._faculties = []
-        self._departments = []
-        self._advisors = []
-        self._roles = []
-        self._expertise = []
+        self._interests: list[Doc] = []
+        self._institutes: list[Doc] = []
+        self._faculties: list[Doc] = []
+        self._departments: list[Doc] = []
+        self._advisors: list[Doc] = []
+        self._roles: list[Doc] = []
+        self._expertise: list[Doc] = []
 
     def __str__(self) -> str:
         output = []
@@ -50,8 +50,11 @@ class DataAssignment:  # better name??? mapping?
         return "\n\n".join(output)
 
     def add_entry(self, row: list[str]) -> None:
-        """takes a table row and adds new Person entry and respective values to the lists"""
-        # for every entry check if empty/"--"
+        """
+        takes a table row and adds new Person entry
+        and respective values to the lists
+        """
+        # for every mandatory entry check if empty/"--"
         title, name = self._split_title(row[SourceRows.NAME.value])
         email = row[SourceRows.EMAIL.value]
         #email_rating = 0
@@ -73,9 +76,10 @@ class DataAssignment:  # better name??? mapping?
     @staticmethod
     def _split_title(name_field: str) -> tuple[str, str]:
         """
-        Split a name entry into academic title and name parts
+        Split a name entry into academic title and name
         """
-        title_tokens = ("dr.", "prof.", "nat.", ...)
+        # TODO: add more titles
+        title_tokens = ("dr.", "prof.", "nat.", "rer.", )
         title = []
         name = []
         tokens = name_field.split()
@@ -90,19 +94,24 @@ class DataAssignment:  # better name??? mapping?
 
     @staticmethod
     def _is_empty(value: str) -> bool:
-        """returns true if string is empty or only hyphens"""
-        return value.replace("-", "") == ""
+        """returns true if string is empty, only whitespace or only hyphens"""
+        return (value.replace("-", "") == "") or value.isspace()
 
     @staticmethod
     def _get_regex_pattern(delimiters: Iterable[str]):
         return "|".join(map(re.escape, delimiters))
 
-    def _get_docs_indices(self, row: list[str], source_column: SourceRows, delimiters: Iterable[str]) -> list[Doc]:
+    def _entries_to_docs(self, entries: str, pattern: str) -> list[Doc]:
+        split_entries = re.split(pattern, entries)
+        docs = [self._nlp(x.strip()) for x in split_entries]
+        return docs
+
+    def _get_docs_indices(self, row: list[str], source_column: SourceRows, delimiters: Iterable[str]) -> list[int]:
         entries = row[source_column.value]
         if not self._is_empty(entries):
             indices = []
-            split_entries = re.split(self._get_regex_pattern(delimiters), entries)
-            docs = [self._nlp(x.strip()) for x in split_entries]
+            pattern = self._get_regex_pattern(delimiters)
+            docs = self._entries_to_docs(entries, pattern)
 
         match source_column:
             case SourceRows.INTEREST:
@@ -124,14 +133,6 @@ class DataAssignment:  # better name??? mapping?
             indices.append(len(target_list) - 1)
 
         return indices
-
-    # @staticmethod
-    # def _get_docs(value: str, delimiters: list[str]) -> list[Doc]:
-    #     # if not empty
-    #     # split
-    #     # convert to doc
-    #     # add docs to lists
-    #     pass
 
     # def _add_field(self, row: list[str], target_column: SourceRows, person: Person) -> None:
     #     docs = self._get_docs(row[target_column.value])
