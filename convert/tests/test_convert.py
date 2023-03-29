@@ -101,13 +101,13 @@ class TestAddEntries(unittest.TestCase):
         person = data._persons[0]
         # 1 person was added
         self.assertEqual(len(data._persons), 1)
-        self.assertEqual(person._title, "Dr.")
-        self.assertEqual(person._name, "Heinz-Jan Kunz")
-        self.assertEqual(person._comment, "comment")
+        self.assertEqual(person.title, "Dr.")
+        self.assertEqual(person.name, "Heinz-Jan Kunz")
+        self.assertEqual(person.comment, "comment")
 
         # roles
         self.assertEqual(data._roles[1], "Professor")
-        self.assertEqual(person._roles_ids[1], 1)
+        self.assertEqual(person.roles_ids[1], 1)
 
         # interests
         self.assertEqual(len(data._interests), 3)
@@ -115,29 +115,29 @@ class TestAddEntries(unittest.TestCase):
         self.assertEqual(data._interests[1].text, "machine learning")
         self.assertEqual(data._interests[2].text, "simulation & stuff/")
 
-        self.assertEqual(len(person._interests_ids), 3)
-        self.assertEqual(person._interests_ids[0], 0)
-        self.assertEqual(person._interests_ids[1], 1)
-        self.assertEqual(person._interests_ids[2], 2)
+        self.assertEqual(len(person.interests_ids), 3)
+        self.assertEqual(person.interests_ids[0], 0)
+        self.assertEqual(person.interests_ids[1], 1)
+        self.assertEqual(person.interests_ids[2], 2)
 
-        self.assertEqual(data._interests[person._interests_ids[0]].text, "data analytics")
-        self.assertEqual(data._interests[person._interests_ids[1]].text, "machine learning")
-        self.assertEqual(data._interests[person._interests_ids[2]].text, "simulation & stuff/")
+        self.assertEqual(data._interests[person.interests_ids[0]].text, "data analytics")
+        self.assertEqual(data._interests[person.interests_ids[1]].text, "machine learning")
+        self.assertEqual(data._interests[person.interests_ids[2]].text, "simulation & stuff/")
 
         # departments
         self.assertEqual(len(data._departments), 1)
-        self.assertEqual(data._departments[person._departments_ids[0]], "ZIH")
+        self.assertEqual(data._departments[person.departments_ids[0]], "ZIH")
 
         # offered expertise
-        self.assertEqual(len(person._offered_expertise_ids), 2)
-        self.assertEqual(person._offered_expertise_ids[0], 0)
-        self.assertEqual(person._offered_expertise_ids[1], 1)
+        self.assertEqual(len(person.offered_expertise_ids), 2)
+        self.assertEqual(person.offered_expertise_ids[0], 0)
+        self.assertEqual(person.offered_expertise_ids[1], 1)
 
-        self.assertEqual(data._expertise[person._offered_expertise_ids[0]].text, "Public Relations")
-        self.assertEqual(data._expertise[person._offered_expertise_ids[1]].text, "DevOps")
+        self.assertEqual(data._expertise[person.offered_expertise_ids[0]].text, "Public Relations")
+        self.assertEqual(data._expertise[person.offered_expertise_ids[1]].text, "DevOps")
 
         # for empty wanted expertise field
-        self.assertEqual(len(person._wanted_expertise_ids), 0)
+        self.assertEqual(len(person.wanted_expertise_ids), 0)
         self.assertEqual(len(data._expertise), 2)
 
         # TODO: test the other lists after implementing

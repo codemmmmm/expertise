@@ -61,14 +61,14 @@ class DataAssignment:  # better name??? mapping?
 
         for person in self._persons:
             print(person)
-            print(get_strings(self._interests, person._interests_ids))
-            print(get_strings(self._institutes, person._institutes_ids))
-            print(get_strings(self._faculties, person._faculties_ids))
-            print(get_strings(self._departments, person._departments_ids))
-            print(get_strings(self._advisors, person._advisors_ids))
-            print(get_strings(self._roles, person._roles_ids))
-            print(get_strings(self._expertise, person._offered_expertise_ids))
-            print(get_strings(self._expertise, person._wanted_expertise_ids))
+            print(get_strings(self._interests, person.interests_ids))
+            print(get_strings(self._institutes, person.institutes_ids))
+            print(get_strings(self._faculties, person.faculties_ids))
+            print(get_strings(self._departments, person.departments_ids))
+            print(get_strings(self._advisors, person.advisors_ids))
+            print(get_strings(self._roles, person.roles_ids))
+            print(get_strings(self._expertise, person.offered_expertise_ids))
+            print(get_strings(self._expertise, person.wanted_expertise_ids))
             print("\n")
 
     def add_entry(self, row: list[str]) -> None:
@@ -88,33 +88,37 @@ class DataAssignment:  # better name??? mapping?
         comment = row[SourceColumns.COMMENT.value]
         person = Person(title, name, email, comment)
 
-        # process the other columns
-        # TODO: maybe simply pass the target list here?
+        # maybe simply pass the target list?
         interests_indices = self._add_docs(row, SourceColumns.INTEREST, (",", ";"))
-        person.interests_extend(interests_indices)
+        person.interests_ids.extend(interests_indices)
 
-        # TODO: institutes
-        # if only one word without separator -> institute?
-        # else ??
         (institute_indices,
         faculties_indices,departments_indices
         ) = self._add_institute(row, SourceColumns.INSTITUTE, (",", "/"))
-        person.institutes_extend(institute_indices)
-        person.faculties_extend(faculties_indices)
-        person.departments_extend(departments_indices)
+        person.institutes_ids.extend(institute_indices)
+        person.faculties_ids.extend(faculties_indices)
+        person.departments_ids.extend(departments_indices)
 
         advisor_indices = self._add_basic_value(row, SourceColumns.ADVISOR, (",", "/"))
-        person.advisors_extend(advisor_indices)
+        person.advisors_ids.extend(advisor_indices)
 
         role_indices = self._add_basic_value(row, SourceColumns.ROLE, (",", "/"))
-        person.roles_extend(role_indices)
+        person.roles_ids.extend(role_indices)
 
         offered_indices = self._add_docs(row, SourceColumns.OFFERED, (","))
-        person.offered_extend(offered_indices)
+        person.offered_expertise_ids.extend(offered_indices)
         wanted_indices = self._add_docs(row, SourceColumns.WANTED, (","))
-        person.wanted_extend(wanted_indices)
+        person.wanted_expertise_ids.extend(wanted_indices)
 
         self._persons.append(person)
+
+    def merge(self):
+        self._merge_advisors()
+
+    def _merge_advisors(self):
+        # advisors should be connected to existing persons (search advisor.name in names)
+        # else added as new persons
+        pass
 
     @staticmethod
     def _split_title(name_field: str) -> tuple[str, str]:
@@ -237,20 +241,7 @@ class DataAssignment:  # better name??? mapping?
 
         return indices
 
-    # def _add_field(self, row: list[str], target_column: SourceRows, person: Person) -> None:
-    #     docs = self._get_docs(row[target_column.value])
-    #     for doc in :
-    #         # add
-
-    #     # add references to person
-    #     match target_column:
-    #         case SourceRows.INTEREST:
-    #             target_list = self._
-
     # methods for merging
-
-    # advisors should be connected to existing persons (search advisor.name in names)
-    # else added as new persons
 
     # def export()
     # log which entries couldn't be converted (e.g. missing email)
