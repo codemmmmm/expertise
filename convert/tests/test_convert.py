@@ -76,8 +76,50 @@ class TestDocs(unittest.TestCase):
         for actual, expected in zip(docs_actual, docs_expected):
             self.assertEqual(actual.text, expected.text)
 
+class TestAddEntries(unittest.TestCase):
+    def setUp(self):
+        spacy_model_name = "en_core_web_md"
+        nlp = spacy.load(spacy_model_name)
+        self._dataAssignment = DataAssignment(nlp)
 
-# tests for addEntry and merging
+    def test_add_first_entry(self):
+        row = [
+            "Dr. Heinz-Jan Kunz",
+            "email@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Advisor Adv",
+            "Researcher",
+            "Public Relations, DevOps",
+            "Keras, Soft matter physics",
+            "comment"]
+
+        data = self._dataAssignment
+        data.add_entry(row)
+        person = data._persons[0]
+        # 1 person was added
+        self.assertEqual(len(data._persons), 1)
+        self.assertEqual(person._title, "Dr.")
+        self.assertEqual(person._name, "Heinz-Jan Kunz")
+        self.assertEqual(person._comment, "comment")
+
+        self.assertEqual(len(data._interests), 3)
+        self.assertEqual(data._interests[0].text, "data analytics")
+        self.assertEqual(data._interests[1].text, "machine learning")
+        self.assertEqual(data._interests[2].text, "simulation & stuff/")
+
+        self.assertEqual(len(person._interests_ids), 3)
+        self.assertEqual(person._interests_ids[0], 0)
+        self.assertEqual(person._interests_ids[1], 1)
+        self.assertEqual(person._interests_ids[2], 2)
+
+        self.assertEqual(data._interests[person._interests_ids[0]].text, "data analytics")
+        self.assertEqual(data._interests[person._interests_ids[1]].text, "machine learning")
+        self.assertEqual(data._interests[person._interests_ids[2]].text, "simulation & stuff/")
+
+        # TODO: test the other lists after implementing
+
+# TODO: tests for addEntry and merging
 
 if __name__ == "__main__":
     unittest.main()

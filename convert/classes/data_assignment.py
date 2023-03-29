@@ -22,11 +22,10 @@ class DataAssignment:  # better name??? mapping?
     """
     for assigning values to persons and merging values among each other
     """
-    _persons: list[Person]
 
     def __init__(self, nlp: Language) -> None:
         self._nlp = nlp
-        self._persons = []
+        self._persons: list[Person] = []
         # is there a better type than lists? like dicts or sets
         # after adding all entries the lists must not be changed (appended, removed)
         self._interests: list[Doc] = []
