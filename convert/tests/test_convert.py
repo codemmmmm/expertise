@@ -54,7 +54,8 @@ class TestDocs(unittest.TestCase):
     def test_split_to_docs1(self):
         entries = "data analytics; federated machin\e learning; application support"
         pattern = self._dataAssignment._get_regex_pattern([";",])
-        docs_actual = self._dataAssignment._entries_to_docs(entries, pattern)
+        split_entries = re.split(pattern, entries)
+        docs_actual = self._dataAssignment._entries_to_docs(split_entries)
         docs_expected = [
             self._nlp("data analytics"),
             self._nlp("federated machin\e learning"),
@@ -66,7 +67,8 @@ class TestDocs(unittest.TestCase):
     def test_split_to_docs2(self):
         entries = "ML/DL in engineering; Digital Twin \ other stuff"
         pattern = self._dataAssignment._get_regex_pattern(["/", "&", "\\", ";"])
-        docs_actual = self._dataAssignment._entries_to_docs(entries, pattern)
+        split_entries = re.split(pattern, entries)
+        docs_actual = self._dataAssignment._entries_to_docs(split_entries)
         docs_expected = [
             self._nlp("ML"),
             self._nlp("DL in engineering"),
@@ -89,9 +91,9 @@ class TestAddEntries(unittest.TestCase):
             "data analytics, machine learning, simulation & stuff/",
             "TU Dresden / Computer Science / ZIH",
             "Advisor Adv",
-            "Researcher",
+            "Researcher, Professor",
             "Public Relations, DevOps",
-            "Keras, Soft matter physics",
+            "--",
             "comment"]
 
         data = self._dataAssignment
@@ -103,6 +105,11 @@ class TestAddEntries(unittest.TestCase):
         self.assertEqual(person._name, "Heinz-Jan Kunz")
         self.assertEqual(person._comment, "comment")
 
+        # roles
+        self.assertEqual(data._roles[1], "Professor")
+        self.assertEqual(person._roles_ids[1], 1)
+
+        # interests
         self.assertEqual(len(data._interests), 3)
         self.assertEqual(data._interests[0].text, "data analytics")
         self.assertEqual(data._interests[1].text, "machine learning")
@@ -116,6 +123,22 @@ class TestAddEntries(unittest.TestCase):
         self.assertEqual(data._interests[person._interests_ids[0]].text, "data analytics")
         self.assertEqual(data._interests[person._interests_ids[1]].text, "machine learning")
         self.assertEqual(data._interests[person._interests_ids[2]].text, "simulation & stuff/")
+
+        # departments
+        self.assertEqual(len(data._departments), 1)
+        self.assertEqual(data._departments[person._departments_ids[0]], "ZIH")
+
+        # offered expertise
+        self.assertEqual(len(person._offered_expertise_ids), 2)
+        self.assertEqual(person._offered_expertise_ids[0], 0)
+        self.assertEqual(person._offered_expertise_ids[1], 1)
+
+        self.assertEqual(data._expertise[person._offered_expertise_ids[0]].text, "Public Relations")
+        self.assertEqual(data._expertise[person._offered_expertise_ids[1]].text, "DevOps")
+
+        # for empty wanted expertise field
+        self.assertEqual(len(person._wanted_expertise_ids), 0)
+        self.assertEqual(len(data._expertise), 2)
 
         # TODO: test the other lists after implementing
 

@@ -42,7 +42,8 @@ def main() -> int:
                 # print()
             i += 1
 
-    print(data)
+    #print(data)
+    data.print_persons()
     return 0
 
 if __name__ == "__main__":
