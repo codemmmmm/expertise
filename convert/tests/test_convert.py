@@ -90,7 +90,7 @@ class TestAddEntries(unittest.TestCase):
             "email@tu-dresden.de",
             "data analytics, machine learning, simulation & stuff/",
             "TU Dresden / Computer Science / ZIH",
-            "Advisor Adv",
+            "Dr. Advisor Adv",
             "Researcher, Professor",
             "Public Relations, DevOps",
             "--",
@@ -141,6 +141,144 @@ class TestAddEntries(unittest.TestCase):
         self.assertEqual(len(data._expertise), 2)
 
         # TODO: test the other lists after implementing
+
+class TestMergeAdvisors(unittest.TestCase):
+    def setUp(self):
+        spacy_model_name = "en_core_web_md"
+        nlp = spacy.load(spacy_model_name)
+        self._dataAssignment = DataAssignment(nlp)
+
+    def test_advisors_found_person(self):
+        row1 = [
+            "Jana Kraut",
+            "jana.kraut@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Advisor Adv",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "--",
+            "comment"]
+        row2 = [
+            "Dr. Heinz-Jan Kunz",
+            "email@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Prof. Dr. nat. Kraut",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "--",
+            "comment"]
+
+        data = self._dataAssignment
+        data.add_entry(row1)
+        data.add_entry(row2)
+        data._merge_advisors()
+        # now the 2nd person's advisor_indices should point to persons[0] (index 0)
+        # instead of advisors[1] (index 1)
+        person_with_reassigned_advisor = data._persons[1]
+        self.assertEqual(person_with_reassigned_advisor.advisors_ids[0], 0)
+        self.assertEqual(data._persons[person_with_reassigned_advisor.advisors_ids[0]].email, "jana.kraut@tu-dresden.de")
+        # check that the title from advisor column was assigned to the
+        # respective person if it had no title
+        self.assertEqual(data._persons[person_with_reassigned_advisor.advisors_ids[0]].title, "Prof. Dr. nat.")
+
+    def test_advisors_not_found_person(self):
+        """
+        test where the first person's advisor does not yet exist
+        """
+        row1 = [
+            "Jana Kraut",
+            "jana.kraut@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Dr. Adviso",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "--",
+            "comment"]
+        row2 = [
+            "Dr. Heinz-Jan Kunz",
+            "kunz1@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Prof. Dr. nat. Jana Kraut",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "--",
+            "comment"]
+        row3 = [
+            "Dr. Heinz-Jan Kunz2",
+            "kunz2@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Prof. Dr. nat. Jana Kraut",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "--",
+            "comment"]
+
+        data = self._dataAssignment
+        data.add_entry(row1)
+        data.add_entry(row2)
+        data.add_entry(row3)
+        data._merge_advisors()
+        person_with_new_advisor = data._persons[0]
+        self.assertEqual(len(data._persons), 4)
+        self.assertEqual(person_with_new_advisor.advisors_ids[0], len(data._persons) - 1)
+        self.assertEqual(data._persons[person_with_new_advisor.advisors_ids[0]].email, "")
+        self.assertEqual(data._persons[person_with_new_advisor.advisors_ids[0]].name, "Adviso")
+        self.assertEqual(data._persons[person_with_new_advisor.advisors_ids[0]].title, "Dr.")
+
+    def test_advisors_not_found_same_person(self):
+        """
+        test where two people have the same advisor that does not yet exist
+        """
+        row1 = [
+            "Jana Kraut",
+            "jana.kraut@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Dr. Adviso",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "--",
+            "comment"]
+        row2 = [
+            "Dr. Heinz-Jan Kunz",
+            "kunz1@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Prof. Dr. nat. Jana Kraut",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "Public Relations, DevOps",
+            "comment"]
+        row3 = [
+            "Vorname Nachname",
+            "a.b@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Dr. nat. Adviso",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "Public Relations, DevOps",
+            "comment"]
+
+        data = self._dataAssignment
+        data.add_entry(row1)
+        data.add_entry(row2)
+        data.add_entry(row3)
+        data._merge_advisors()
+        person1_with_new_advisor = data._persons[0]
+        person2_with_new_advisor = data._persons[2]
+        self.assertEqual(len(data._persons), 4)
+        self.assertEqual(person1_with_new_advisor.advisors_ids[0], 3)
+        self.assertEqual(data._persons[person1_with_new_advisor.advisors_ids[0]].email, "")
+        self.assertEqual(data._persons[person1_with_new_advisor.advisors_ids[0]].name, "Adviso")
+        # the longer title from the second mention of the non-existent advisor is chosen
+        self.assertEqual(data._persons[person1_with_new_advisor.advisors_ids[0]].title, "Dr. nat.")
+        self.assertEqual(person2_with_new_advisor.advisors_ids[0], 3)
 
 # TODO: tests for addEntry and merging
 

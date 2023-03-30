@@ -28,14 +28,13 @@ def main() -> int:
     data = DataAssignment(nlp)
     i = 0
     with open(csv_path, newline="", encoding="utf-8") as csvfile:
-        # maybe csv.DictReader instead
         csv_reader = csv.reader(csvfile, delimiter=",", quotechar="|")
         # skip first two lines without actual data
         next(csv_reader)
         next(csv_reader)
         for row in csv_reader:
             # print(", ".join(row))
-            if i < 5:
+            if i < 1000:
                 data.add_entry(row)
                 # for s in row:
                 #    print(s)
@@ -43,6 +42,7 @@ def main() -> int:
             i += 1
 
     #print(data)
+    data.merge()
     data.print_persons()
     return 0
 

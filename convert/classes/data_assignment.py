@@ -8,6 +8,7 @@ from spacy.tokens import Doc
 
 from classes.person import Person
 
+
 class SourceColumns(Enum):
     NAME = 0
     EMAIL = 1
@@ -18,6 +19,7 @@ class SourceColumns(Enum):
     OFFERED = 6
     WANTED = 7
     COMMENT = 8
+
 
 class DataAssignment:  # better name??? mapping?
     """
@@ -41,16 +43,11 @@ class DataAssignment:  # better name??? mapping?
         self._expertise: list[Doc] = []
 
     def __str__(self) -> str:
-        output = []
-        for person in self._persons:
-            entry = str(person)
-            entry += (
-                f"\nINTERESTS {self._interests}\nINSTITUTES {self._institutes}\n"
-                f"FACULTIES {self._faculties}\nDEPARTMENTS {self._departments}\n"
-                f"ADVISORS {self._advisors}\nROLES {self._roles}\n"
-                f"EXPERTISE {self._expertise}\n")
-            output.append(entry)
-        return "\n\n".join(output)
+        out = (f"\nINTERESTS {self._interests}\nINSTITUTES {self._institutes}\n"
+               f"FACULTIES {self._faculties}\nDEPARTMENTS {self._departments}\n"
+               f"ADVISORS {self._advisors}\nROLES {self._roles}\n"
+               f"EXPERTISE {self._expertise}\n")
+        return out
 
     def print_persons(self) -> None:
         def get_strings(entries: list[Any], indices: list[int]) -> list[str]:
@@ -65,7 +62,9 @@ class DataAssignment:  # better name??? mapping?
             print(get_strings(self._institutes, person.institutes_ids))
             print(get_strings(self._faculties, person.faculties_ids))
             print(get_strings(self._departments, person.departments_ids))
-            print(get_strings(self._advisors, person.advisors_ids))
+            # only works after merging
+            advisors = [(x.title, x.name) for x in self._persons]
+            print(get_strings(advisors, person.advisors_ids))
             print(get_strings(self._roles, person.roles_ids))
             print(get_strings(self._expertise, person.offered_expertise_ids))
             print(get_strings(self._expertise, person.wanted_expertise_ids))
@@ -79,11 +78,11 @@ class DataAssignment:  # better name??? mapping?
         # for every mandatory entry check if empty/"--"
         title, name = self._split_title(row[SourceColumns.NAME.value])
         email = row[SourceColumns.EMAIL.value]
-        #email_rating = 0
-        if email:
-            email_token = self._nlp(email)[0]
-            #if email_token.like_email:
-            #    email_rating = 1
+        # email_rating = 0
+        # if email:
+        #     email_token = self._nlp(email)[0]
+        #     if email_token.like_email:
+        #         email_rating = 1
 
         comment = row[SourceColumns.COMMENT.value]
         person = Person(title, name, email, comment)
@@ -93,8 +92,8 @@ class DataAssignment:  # better name??? mapping?
         person.interests_ids.extend(interests_indices)
 
         (institute_indices,
-        faculties_indices,departments_indices
-        ) = self._add_institute(row, SourceColumns.INSTITUTE, (",", "/"))
+         faculties_indices, departments_indices
+         ) = self._add_institute(row, SourceColumns.INSTITUTE, (",", "/"))
         person.institutes_ids.extend(institute_indices)
         person.faculties_ids.extend(faculties_indices)
         person.departments_ids.extend(departments_indices)
@@ -112,23 +111,49 @@ class DataAssignment:  # better name??? mapping?
 
         self._persons.append(person)
 
-    def merge(self):
+    def merge(self) -> None:
+
         self._merge_advisors()
 
-    def _merge_advisors(self):
-        # advisors should be connected to existing persons (search advisor.name in names)
-        # else added as new persons
-        pass
+    def _merge_advisors(self) -> None:
+        """
+        if an advisor has the same name as a person then change the advisor index
+        to point to a person entry. else create a new person and point the advisor
+        index to that
+        """
+        for person in self._persons:
+            # use only the last name of the person to match
+            person_names = [x.name.split()[-1].lower() for x in self._persons]
+            for list_index, advisor_index in enumerate(person.advisors_ids):
+                advisor = self._advisors[advisor_index]
+                try:
+                    index_same_person = person_names.index(advisor[1].split()[-1].lower())
+                    # TODO: search again but allow a single letter difference
+                    # replace reference to an advisor id with a person id
+                    person.advisors_ids[list_index] = index_same_person
+
+                    title_from_person_column = self._persons[index_same_person].title
+                    title_from_advisor_column = advisor[0]
+                    # TODO: maybe compare on len(titles.split()) to see if it
+                    # has more title parts listed rather than a longer title
+                    if len(title_from_person_column) < len(title_from_advisor_column):
+                        self._persons[index_same_person].title = title_from_advisor_column
+                except ValueError:
+                    new_person = Person(advisor[0], advisor[1], "", "")
+                    self._persons.append(new_person)
+                    person.advisors_ids[list_index] = len(self._persons) - 1
 
     @staticmethod
     def _split_title(name_field: str) -> tuple[str, str]:
         """
-        Split a name entry into academic title and name
+        Split a name entry into academic title and name. Remove all letters after '('
         """
         # TODO: add more titles
         title_tokens = ("dr.", "prof.", "nat.", "rer.", )
         title = []
         name = []
+        # remove everything after a '('
+        name_field = name_field.split(" (", 1)[0]
         tokens = name_field.split()
         for token in tokens:
             if token.lower() in title_tokens:
