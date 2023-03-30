@@ -1,15 +1,15 @@
 import re
 from collections.abc import Iterable
-from typing import Any
-from enum import Enum
+from typing import Any, Union, Sequence
+from enum import Enum, auto
 
 from spacy import Language
 from spacy.tokens import Doc
 
 from classes.person import Person
 
-
 class SourceColumns(Enum):
+    """represents the index of the columns in the source document"""
     NAME = 0
     EMAIL = 1
     INTEREST = 2
@@ -20,6 +20,15 @@ class SourceColumns(Enum):
     WANTED = 7
     COMMENT = 8
 
+class TargetColumns(Enum):
+    INTEREST = auto()
+    INSTITUTE = auto()
+    FACULTY = auto()
+    DEPARTMENT = auto()
+    ADVISOR = auto()
+    ROLE = auto()
+    OFFERED_EXPERTISE = auto()
+    WANTED_EXPERTISE = auto()
 
 class DataAssignment:  # better name??? mapping?
     """
@@ -112,8 +121,9 @@ class DataAssignment:  # better name??? mapping?
         self._persons.append(person)
 
     def merge(self) -> None:
-
         self._merge_advisors()
+        self._merge_by_name(TargetColumns.ROLE)
+        #self._merge_by_meaning()
 
     def _merge_advisors(self) -> None:
         """
@@ -143,10 +153,50 @@ class DataAssignment:  # better name??? mapping?
                     self._persons.append(new_person)
                     person.advisors_ids[list_index] = len(self._persons) - 1
 
+    def _merge_by_name(self, target: TargetColumns) -> None:
+        entries: dict[str, int] = {}
+        match target:
+            case TargetColumns.INTEREST:
+                source_list = self._interests
+            case TargetColumns.INSTITUTE:
+                source_list = self._institutes
+            case TargetColumns.FACULTY:
+                source_list = self._faculties
+            case TargetColumns.DEPARTMENT:
+                source_list = self._departments
+            case TargetColumns.ROLE:
+                source_list = self._roles
+            case TargetColumns.OFFERED_EXPERTISE | TargetColumns.WANTED_EXPERTISE:
+                source_list = self._expertise
+            case _:
+                print("NONE MATCHED")
+
+        for person in self._persons:  # Sequence[Union[str, Doc]
+        # TODO: change to use the respective list
+            # list_index is the index of the value in the person.list
+            # source_index is the index of the value in the source_list
+            roles_ids = person.roles_ids
+            for list_index, source_index in enumerate(roles_ids):
+                value = source_list[source_index]
+                if isinstance(value, Doc):
+                    value = value.text
+
+                similar_value_found = False
+                for key in entries:
+                    # TODO: use similarity comparison function
+                    if value == key:
+                        roles_ids[list_index] = entries[key]
+                        similar_value_found = True
+                        break
+                if not similar_value_found:
+                    entries[value] = source_index
+            print(roles_ids)
+
     @staticmethod
     def _split_title(name_field: str) -> tuple[str, str]:
         """
-        Split a name entry into academic title and name. Remove all letters after '('
+        Remove all letters after '(' and split a name entry
+        into academic titles and name.
         """
         # TODO: add more titles
         title_tokens = ("dr.", "prof.", "nat.", "rer.", )

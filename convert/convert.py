@@ -43,7 +43,7 @@ def main() -> int:
 
     #print(data)
     data.merge()
-    data.print_persons()
+    #data.print_persons()
     return 0
 
 if __name__ == "__main__":

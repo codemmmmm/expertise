@@ -280,6 +280,73 @@ class TestMergeAdvisors(unittest.TestCase):
         self.assertEqual(data._persons[person1_with_new_advisor.advisors_ids[0]].title, "Dr. nat.")
         self.assertEqual(person2_with_new_advisor.advisors_ids[0], 3)
 
+
+class TestMergeByName(unittest.TestCase):
+    def setUp(self):
+        spacy_model_name = "en_core_web_md"
+        nlp = spacy.load(spacy_model_name)
+        self._dataAssignment = DataAssignment(nlp)
+
+    def test_merge_role(self):
+        row1 = [
+            "Jana Kraut",
+            "jana.kraut@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Dr. Adviso",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "--",
+            "comment"]
+        row2 = [
+            "Dr. Heinz-Jan Kunz",
+            "kunz1@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Prof. Dr. nat. Jana Kraut",
+            "Programmer",
+            "Public Relations, DevOps",
+            "Public Relations, DevOps",
+            "comment"]
+        row3 = [
+            "Vorname Nachname",
+            "a.b@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Dr. nat. Adviso",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "Public Relations, DevOps",
+            "comment"]
+        row4 = [
+            "Vorname Nachname",
+            "a.b@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Dr. nat. Adviso",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "Public Relations, DevOps",
+            "comment"]
+
+        data = self._dataAssignment
+        data.add_entry(row1)
+        data.add_entry(row2)
+        data.add_entry(row3)
+        data.add_entry(row4)
+        data._merge_advisors()
+        data._merge_by_name(data._roles)
+        self.assertEqual(data._persons[0].roles_ids[0], 0)
+        self.assertEqual(data._persons[0].roles_ids[1], 1)
+        self.assertEqual(data._persons[1].roles_ids[0], 2)
+        self.assertEqual(data._persons[2].roles_ids[0], 0)
+        self.assertEqual(data._persons[2].roles_ids[1], 1)
+        self.assertEqual(data._persons[3].roles_ids[0], 0)
+        self.assertEqual(data._persons[3].roles_ids[1], 1)
+        self.assertEqual(data._roles[data._persons[3].roles_ids[1]], "Professor")
+        # newly added person (from advisor column) has of course nothing assigned
+        self.assertEqual(len(data._persons[4].roles_ids), 0)
+
 # TODO: tests for addEntry and merging
 
 if __name__ == "__main__":
