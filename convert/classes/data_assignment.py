@@ -131,6 +131,7 @@ class DataAssignment:  # better name??? mapping?
         self._merge_by_name(TargetColumns.WANTED_EXPERTISE)
         # TODO: implement self._merge_by_meaning()
         # maybe by using _merge_by_name() and passing a comparison function?
+        # use difflib?
 
     def _merge_advisors(self) -> None:
         """
