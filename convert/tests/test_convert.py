@@ -3,7 +3,7 @@ import re
 
 import spacy
 
-from classes.data_assignment import DataAssignment
+from classes.data_assignment import DataAssignment, TargetColumns
 
 class TestStringProcessing(unittest.TestCase):
     def test_empty_field(self):
@@ -287,15 +287,15 @@ class TestMergeByName(unittest.TestCase):
         nlp = spacy.load(spacy_model_name)
         self._dataAssignment = DataAssignment(nlp)
 
-    def test_merge_role(self):
+    def test_merge_role_and_interests(self):
         row1 = [
             "Jana Kraut",
             "jana.kraut@tu-dresden.de",
             "data analytics, machine learning, simulation & stuff/",
             "TU Dresden / Computer Science / ZIH",
             "Dr. Adviso",
-            "Researcher, Professor",
-            "Public Relations, DevOps",
+            "researcher, Professor",
+            "Python, C++", # offered expertise
             "--",
             "comment"]
         row2 = [
@@ -305,8 +305,8 @@ class TestMergeByName(unittest.TestCase):
             "TU Dresden / Computer Science / ZIH",
             "Prof. Dr. nat. Jana Kraut",
             "Programmer",
-            "Public Relations, DevOps",
-            "Public Relations, DevOps",
+            "Graph theory", # offered expertise
+            "Public Relations",
             "comment"]
         row3 = [
             "Vorname Nachname",
@@ -315,8 +315,8 @@ class TestMergeByName(unittest.TestCase):
             "TU Dresden / Computer Science / ZIH",
             "Dr. nat. Adviso",
             "Researcher, Professor",
-            "Public Relations, DevOps",
-            "Public Relations, DevOps",
+            "Data analysis, python", # offered expertise
+            "Public Relations",
             "comment"]
         row4 = [
             "Vorname Nachname",
@@ -325,8 +325,8 @@ class TestMergeByName(unittest.TestCase):
             "TU Dresden / Computer Science / ZIH",
             "Dr. nat. Adviso",
             "Researcher, Professor",
-            "Public Relations, DevOps",
-            "Public Relations, DevOps",
+            "Data analysis", # offered expertise
+            "DevOps",
             "comment"]
 
         data = self._dataAssignment
@@ -335,7 +335,14 @@ class TestMergeByName(unittest.TestCase):
         data.add_entry(row3)
         data.add_entry(row4)
         data._merge_advisors()
-        data._merge_by_name(data._roles)
+        data._merge_by_name(TargetColumns.INTEREST)
+        data._merge_by_name(TargetColumns.INSTITUTE)
+        data._merge_by_name(TargetColumns.FACULTY)
+        data._merge_by_name(TargetColumns.DEPARTMENT)
+        data._merge_by_name(TargetColumns.ROLE)
+        data._merge_by_name(TargetColumns.OFFERED_EXPERTISE)
+        data._merge_by_name(TargetColumns.WANTED_EXPERTISE)
+        # test role merging
         self.assertEqual(data._persons[0].roles_ids[0], 0)
         self.assertEqual(data._persons[0].roles_ids[1], 1)
         self.assertEqual(data._persons[1].roles_ids[0], 2)
@@ -344,8 +351,27 @@ class TestMergeByName(unittest.TestCase):
         self.assertEqual(data._persons[3].roles_ids[0], 0)
         self.assertEqual(data._persons[3].roles_ids[1], 1)
         self.assertEqual(data._roles[data._persons[3].roles_ids[1]], "Professor")
-        # newly added person (from advisor column) has of course nothing assigned
+        # newly added person (from advisor column) of course has nothing assigned
         self.assertEqual(len(data._persons[4].roles_ids), 0)
+
+        # test offered expertise merging
+        # keep in mind that wanted expertise and offered expertise *values*
+        # are stored in a single expertise list
+        self.assertEqual(len(data._persons[0].offered_expertise_ids), 2)
+        self.assertEqual(data._persons[0].offered_expertise_ids[0], 0) # Python
+        self.assertEqual(data._expertise[data._persons[0].offered_expertise_ids[0]].text, "Python")
+        self.assertEqual(data._persons[0].offered_expertise_ids[1], 1) # C++
+        self.assertEqual(data._persons[1].offered_expertise_ids[0], 2) # Graph theory
+        self.assertEqual(data._persons[2].offered_expertise_ids[0], 4) # Data analysis
+        self.assertEqual(data._persons[2].offered_expertise_ids[1], 0) # python
+        self.assertEqual(data._expertise[data._persons[2].offered_expertise_ids[1]].text, "Python")
+        self.assertEqual(data._persons[3].offered_expertise_ids[0], 4) # Data analysis
+
+        # test wanted expertise merging
+        self.assertEqual(len(data._persons[0].wanted_expertise_ids), 0)
+        self.assertEqual(data._persons[1].wanted_expertise_ids[0], 3) # Public relations
+        self.assertEqual(data._persons[2].wanted_expertise_ids[0], 3)  # Public relations
+        self.assertEqual(data._persons[3].wanted_expertise_ids[0], 8)  # DevOps
 
 # TODO: tests for addEntry and merging
 

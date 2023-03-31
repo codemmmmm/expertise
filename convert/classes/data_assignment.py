@@ -122,8 +122,15 @@ class DataAssignment:  # better name??? mapping?
 
     def merge(self) -> None:
         self._merge_advisors()
+        self._merge_by_name(TargetColumns.INTEREST)
+        self._merge_by_name(TargetColumns.INSTITUTE)
+        self._merge_by_name(TargetColumns.FACULTY)
+        self._merge_by_name(TargetColumns.DEPARTMENT)
         self._merge_by_name(TargetColumns.ROLE)
-        #self._merge_by_meaning()
+        self._merge_by_name(TargetColumns.OFFERED_EXPERTISE)
+        self._merge_by_name(TargetColumns.WANTED_EXPERTISE)
+        # TODO: implement self._merge_by_meaning()
+        # maybe by using _merge_by_name() and passing a comparison function?
 
     def _merge_advisors(self) -> None:
         """
@@ -155,6 +162,7 @@ class DataAssignment:  # better name??? mapping?
 
     def _merge_by_name(self, target: TargetColumns) -> None:
         entries: dict[str, int] = {}
+        source_list: Sequence[Union[Doc, str]]
         match target:
             case TargetColumns.INTEREST:
                 source_list = self._interests
@@ -169,28 +177,47 @@ class DataAssignment:  # better name??? mapping?
             case TargetColumns.OFFERED_EXPERTISE | TargetColumns.WANTED_EXPERTISE:
                 source_list = self._expertise
             case _:
-                print("NONE MATCHED")
+                raise ValueError
 
-        for person in self._persons:  # Sequence[Union[str, Doc]
-        # TODO: change to use the respective list
+        for person in self._persons:
+            match target:
+                case TargetColumns.INTEREST:
+                    assigned_ids = person.interests_ids
+                case TargetColumns.INSTITUTE:
+                    assigned_ids = person.institutes_ids
+                case TargetColumns.FACULTY:
+                    assigned_ids = person.faculties_ids
+                case TargetColumns.DEPARTMENT:
+                    assigned_ids = person.departments_ids
+                case TargetColumns.ROLE:
+                    assigned_ids = person.roles_ids
+                case TargetColumns.OFFERED_EXPERTISE:
+                    assigned_ids = person.offered_expertise_ids
+                case TargetColumns.WANTED_EXPERTISE:
+                    assigned_ids = person.wanted_expertise_ids
+                case _:
+                    raise ValueError
+
             # list_index is the index of the value in the person.list
             # source_index is the index of the value in the source_list
-            roles_ids = person.roles_ids
-            for list_index, source_index in enumerate(roles_ids):
-                value = source_list[source_index]
-                if isinstance(value, Doc):
-                    value = value.text
+            for list_index, source_index in enumerate(assigned_ids):
+                value_to_merge = self._get_value_to_merge(source_list[source_index])
 
                 similar_value_found = False
-                for key in entries:
+                for key, merged_value in entries.items():
                     # TODO: use similarity comparison function
-                    if value == key:
-                        roles_ids[list_index] = entries[key]
+                    if value_to_merge == key:
+                        assigned_ids[list_index] = merged_value
                         similar_value_found = True
                         break
                 if not similar_value_found:
-                    entries[value] = source_index
-            print(roles_ids)
+                    entries[value_to_merge] = source_index
+
+    @staticmethod
+    def _get_value_to_merge(value: Union[Doc, str]) -> str:
+        """get the string.lower() value"""
+        text = value.text if isinstance(value, Doc) else value
+        return text.lower()
 
     @staticmethod
     def _split_title(name_field: str) -> tuple[str, str]:

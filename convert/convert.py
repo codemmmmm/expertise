@@ -43,12 +43,8 @@ def main() -> int:
 
     #print(data)
     data.merge()
-    #data.print_persons()
+    data.print_persons()
     return 0
 
 if __name__ == "__main__":
     main()
-
-# make a function where I merge values from one column
-# make a function where I map values from two columns to each other
-# (nur für Name, aber für die beiden Expertisespalten sollte ich einfach nur zwei Spalten als eine nutzen?)
