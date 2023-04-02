@@ -34,7 +34,6 @@ class DataAssignment:  # better name??? mapping?
     """
     for assigning values to persons and merging values among each other
     """
-
     def __init__(self, nlp: Language) -> None:
         self._nlp = nlp
         self._persons: list[Person] = []
@@ -344,7 +343,8 @@ class DataAssignment:  # better name??? mapping?
 
         return indices
 
-    # methods for merging
+    def export(self):
+        # log which entries couldn't be converted (e.g. missing email)
 
-    # def export()
-    # log which entries couldn't be converted (e.g. missing email)
+        # EXPORT TO CSV FOR NEO4J OR EXPORT STRAIGHT INTO NEO4J WITH QUERIES?
+        pass
