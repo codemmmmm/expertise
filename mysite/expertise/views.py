@@ -1,5 +1,26 @@
 from django.shortcuts import render
 from django.http import HttpResponse
+from expertise.models import (
+    Person,
+    ResearchInterest,
+    Institute,
+    Faculty,
+    Department,
+    Role,
+    Expertise
+)
 
 def index(request):
-    return HttpResponse("Hello, world. You're at the polls index.")
+    m = Person(name='Moritz').save()
+    s = Person(name='Siavash').save()
+    r = m.advisors.connect(s)
+    ResearchInterest(name='AI').save()
+    Role(name='Programmer').save()
+    Expertise(name='python').save()
+    Institute(name='TUD').save()
+    Faculty(name='ZIH').save()
+    Department(name='CompSci').save()
+
+    #for p in Person.nodes.all():
+    #    print(p)
+    return HttpResponse("Hello, world. You're at the expertise index.")
