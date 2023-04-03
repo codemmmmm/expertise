@@ -3,5 +3,20 @@
 {% block title %}Expertise overview{% endblock %}
 
 {% block content %}
+<form class="container-fluid">
+    <div class="mb-3">
+        <h3>
+            <label for="search-filter" class="form-label">Search and filter</label>
+        </h3>
+        <select multiple class="form-select" id="search-filter">
+            <option>a</option>
+            <option>b</option>
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Search</button>
+</form>
 
+<table class="persons-table">
+
+</table>
 {% endblock %}

@@ -26,7 +26,7 @@ def index(request):
     #    print(p)
     #return HttpResponse("Hello, world. <h1>hi</h1>You're at the expertise index.")
     context = {
-        'value': "index",
+
     }
     return render(request, 'expertise/index.html', context)
 
