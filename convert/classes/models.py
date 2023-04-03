@@ -1,4 +1,4 @@
-"""this is a copy of the model file from Django with the django_neomodel dependency removed"
+"""this is a copy of the model file from Django with the django_neomodel dependency removed"""
 from neomodel import StringProperty, EmailProperty, RelationshipTo, UniqueIdProperty, StructuredNode
 
 class ResearchInterest(StructuredNode):

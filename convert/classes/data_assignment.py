@@ -386,7 +386,6 @@ class DataAssignment:  # better name??? mapping?
                     target_node = (
                         models.Person.nodes.get_or_none(name=value.name)
                         or models.Person(name=value.name).save())
-                    print(target_node)
                     person_node.advisors.connect(target_node)
                 case TargetColumns.ROLE:
                     target_node = (
@@ -409,7 +408,6 @@ class DataAssignment:  # better name??? mapping?
     def export(self, neo4j_url: str) -> None:
         config.DATABASE_URL = neo4j_url
         for person in self._persons:
-            print(person.name)
             person_node = models.Person.nodes.get_or_none(name=person.name)
             # if that person's node was already created (from advisors)
             if person_node:
