@@ -287,6 +287,15 @@ class TestMergeByName(unittest.TestCase):
         nlp = spacy.load(spacy_model_name)
         self._dataAssignment = DataAssignment(nlp)
 
+    def test_score(self):
+        data = self._dataAssignment
+        self.assertTrue(data._is_similar_word("python", "pytohn"))
+        self.assertTrue(data._is_similar_word("python", "cython"))
+        self.assertTrue(data._is_similar_word("researcher", "researher"))
+        self.assertFalse(data._is_similar_word("ADF", "ASP"))
+        self.assertFalse(data._is_similar_word("AI", "AL"))
+        self.assertFalse(data._is_similar_word("AI", "ML"))
+
     def test_merge_role_and_interests(self):
         row1 = [
             "Jana Kraut",
@@ -325,7 +334,7 @@ class TestMergeByName(unittest.TestCase):
             "TU Dresden / Computer Science / ZIH",
             "Dr. nat. Adviso",
             "Researcher, Professor",
-            "Data analysis", # offered expertise
+            "Data analytisis", # offered expertise
             "DevOps",
             "comment"]
 

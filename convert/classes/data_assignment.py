@@ -2,6 +2,7 @@ import re
 from collections.abc import Iterable
 from typing import Any, Union, Sequence
 from enum import Enum, auto
+from Levenshtein import jaro_winkler
 
 from spacy import Language
 from spacy.tokens import Doc
@@ -49,6 +50,7 @@ class DataAssignment:  # better name??? mapping?
         self._advisors: list[tuple[str, str]] = []
         self._roles: list[str] = []
         self._expertise: list[Doc] = []
+        self._similarity_score = 0.85
 
     def __str__(self) -> str:
         out = (f"\nINTERESTS {self._interests}\nINSTITUTES {self._institutes}\n"
@@ -129,8 +131,6 @@ class DataAssignment:  # better name??? mapping?
         self._merge_by_name(TargetColumns.OFFERED_EXPERTISE)
         self._merge_by_name(TargetColumns.WANTED_EXPERTISE)
         # TODO: implement self._merge_by_meaning()
-        # maybe by using _merge_by_name() and passing a comparison function?
-        # use difflib?
 
     def _merge_advisors(self) -> None:
         """
@@ -159,6 +159,10 @@ class DataAssignment:  # better name??? mapping?
                     new_person = Person(advisor[0], advisor[1], "", "")
                     self._persons.append(new_person)
                     person.advisors_ids[list_index] = len(self._persons) - 1
+
+    # instead maybe pass a comparison function to _merge_by_name()
+    def _is_similar_word(self, word1: str, word2: str) -> bool:
+        return jaro_winkler(word1, word2) > self._similarity_score
 
     def _merge_by_name(self, target: TargetColumns) -> None:
         entries: dict[str, int] = {}
@@ -205,8 +209,7 @@ class DataAssignment:  # better name??? mapping?
 
                 similar_value_found = False
                 for key, merged_value in entries.items():
-                    # TODO: use similarity comparison function
-                    if value_to_merge == key:
+                    if self._is_similar_word(value_to_merge, key):
                         assigned_ids[list_index] = merged_value
                         similar_value_found = True
                         break
@@ -308,7 +311,7 @@ class DataAssignment:  # better name??? mapping?
                     target_list = self._advisors
                 case SourceColumns.ROLE:
                     target_list = self._roles
-                # case _: maybe throw error?
+                case _: raise ValueError
 
             for entry in split_entries:
                 target_list.append(entry)
@@ -334,7 +337,7 @@ class DataAssignment:  # better name??? mapping?
                     target_list = self._interests
                 case SourceColumns.OFFERED | SourceColumns.WANTED:
                     target_list = self._expertise
-                # case _: maybe throw error?
+                case _: raise ValueError
 
             for doc in docs:
                 target_list.append(doc)
