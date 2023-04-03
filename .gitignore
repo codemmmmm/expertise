@@ -1,6 +1,9 @@
 # for trying things
 try.py
 
+# vscode
+.vscode
+
 # output from pylint UML class diagramm generator
 classes.*
 packages.*

@@ -6,8 +6,10 @@ from Levenshtein import jaro_winkler
 
 from spacy import Language
 from spacy.tokens import Doc
+from neomodel import config
 
-from classes.person import Person
+from classes.person import Personn
+from classes import models
 
 class SourceColumns(Enum):
     """represents the index of the columns in the source document"""
@@ -37,12 +39,10 @@ class DataAssignment:  # better name??? mapping?
     """
     def __init__(self, nlp: Language) -> None:
         self._nlp = nlp
-        self._persons: list[Person] = []
-        # is there a better type than lists? like dicts or sets
-        # after adding all entries the lists must not be changed (appended, removed)
-
+        self._similarity_score = 0.85
+        self._persons: list[Personn] = []
+        # after adding all entries the lists must not be changed (elements removed)!!!
         # use list[Doc] when the entries should be compared by semantic similarity
-        # use Optional ?
         self._interests: list[Doc] = []
         self._institutes: list[str] = []
         self._faculties: list[str] = []
@@ -50,7 +50,6 @@ class DataAssignment:  # better name??? mapping?
         self._advisors: list[tuple[str, str]] = []
         self._roles: list[str] = []
         self._expertise: list[Doc] = []
-        self._similarity_score = 0.85
 
     def __str__(self) -> str:
         out = (f"\nINTERESTS {self._interests}\nINSTITUTES {self._institutes}\n"
@@ -95,7 +94,7 @@ class DataAssignment:  # better name??? mapping?
         #         email_rating = 1
 
         comment = row[SourceColumns.COMMENT.value]
-        person = Person(title, name, email, comment)
+        person = Personn(title, name, email, comment)
 
         # maybe simply pass the target list?
         interests_indices = self._add_docs(row, SourceColumns.INTEREST, (",", ";"))
@@ -156,7 +155,7 @@ class DataAssignment:  # better name??? mapping?
                     if len(title_from_person_column) < len(title_from_advisor_column):
                         self._persons[index_same_person].title = title_from_advisor_column
                 except ValueError:
-                    new_person = Person(advisor[0], advisor[1], "", "")
+                    new_person = Personn(advisor[0], advisor[1], "", "")
                     self._persons.append(new_person)
                     person.advisors_ids[list_index] = len(self._persons) - 1
 
@@ -346,8 +345,90 @@ class DataAssignment:  # better name??? mapping?
 
         return indices
 
-    def export(self):
-        # log which entries couldn't be converted (e.g. missing email)
+    def _connect_nodes(
+        self,
+        person_node: models.Person,
+        target: TargetColumns,
+        values: Sequence[Union[Doc, str, Personn]],
+        indices: list[int],
+    ) -> None:
+        for index in indices:
+            any_value = values[index]
+            value = any_value.text if isinstance(any_value, Doc) else any_value
 
-        # EXPORT TO CSV FOR NEO4J OR EXPORT STRAIGHT INTO NEO4J WITH QUERIES?
-        pass
+            match target:
+                case TargetColumns.INTEREST:
+                    target_node = (
+                        models.ResearchInterest.nodes.get_or_none(name=value)
+                        or models.ResearchInterest(name=value).save())
+                    person_node.interests.connect(target_node)
+                case TargetColumns.INSTITUTE:
+                    target_node = (
+                        models.Institute.nodes.get_or_none(name=value)
+                        or models.Institute(name=value).save())
+                    person_node.institutes.connect(target_node)
+                case TargetColumns.FACULTY:
+                    target_node = (
+                        models.Faculty.nodes.get_or_none(name=value)
+                        or models.Faculty(name=value).save())
+                    person_node.faculties.connect(target_node)
+                case TargetColumns.DEPARTMENT:
+                    target_node = (
+                        models.Department.nodes.get_or_none(name=value)
+                        or models.Department(name=value).save())
+                    person_node.departments.connect(target_node)
+                case TargetColumns.ADVISOR:
+                    # TODO: maybe also check for same email?
+                    # if models.Person.nodes.get_or_none(name=value.name):
+                    #     print(f"advisor {value} of {person_node.name} found")
+                    # else:
+                    #     print(f"advisor {value} of {person_node.name} not found")
+                    target_node = (
+                        models.Person.nodes.get_or_none(name=value.name)
+                        or models.Person(name=value.name).save())
+                    print(target_node)
+                    person_node.advisors.connect(target_node)
+                case TargetColumns.ROLE:
+                    target_node = (
+                        models.Role.nodes.get_or_none(name=value)
+                        or models.Role(name=value).save())
+                    person_node.roles.connect(target_node)
+                case TargetColumns.OFFERED_EXPERTISE:
+                    target_node = (
+                        models.Expertise.nodes.get_or_none(name=value)
+                        or models.Expertise(name=value).save())
+                    person_node.offered_expertise.connect(target_node)
+                case TargetColumns.WANTED_EXPERTISE:
+                    target_node = (
+                        models.Expertise.nodes.get_or_none(name=value)
+                        or models.Expertise(name=value).save())
+                    person_node.wanted_expertise.connect(target_node)
+                case _:
+                    raise ValueError
+
+    def export(self, neo4j_url: str) -> None:
+        config.DATABASE_URL = neo4j_url
+        for person in self._persons:
+            print(person.name)
+            person_node = models.Person.nodes.get_or_none(name=person.name)
+            # if that person's node was already created (from advisors)
+            if person_node:
+                person_node.title = person.title
+                person_node.comment = person.comment
+                if person.email:
+                    person_node.email = person.email
+            else:
+                person_node = models.Person(name=person.name, title=person.title, email=person.email or None, comment=person.comment)
+            person_node.save()
+
+            self._connect_nodes(person_node, TargetColumns.INTEREST, self._interests, person.interests_ids)
+            self._connect_nodes(person_node, TargetColumns.INSTITUTE, self._institutes, person.institutes_ids)
+            self._connect_nodes(person_node, TargetColumns.FACULTY, self._faculties, person.faculties_ids)
+            self._connect_nodes(person_node, TargetColumns.DEPARTMENT, self._departments, person.departments_ids)
+            # here self._persons must be used instead of self._advisors because the
+            # advisors list isn't used anymore after merging advisors/persons
+            self._connect_nodes(person_node, TargetColumns.ADVISOR, self._persons, person.advisors_ids)
+            self._connect_nodes(person_node, TargetColumns.ROLE, self._roles, person.roles_ids)
+            self._connect_nodes(person_node, TargetColumns.OFFERED_EXPERTISE, self._expertise, person.offered_expertise_ids)
+            self._connect_nodes(person_node, TargetColumns.WANTED_EXPERTISE, self._expertise, person.wanted_expertise_ids)
+

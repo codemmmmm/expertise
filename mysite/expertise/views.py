@@ -12,10 +12,11 @@ from expertise.models import (
 )
 
 def index(request):
-    # m = Person(name='Moritz').save()
+    #m = Person(name='Moritz').save()
     # s = Person(name='Siavash').save()
     # r = m.advisors.connect(s)
-    # ResearchInterest(name='AI').save()
+    #ResearchInterest(name='AI').save()
+    #ResearchInterest(name='AI').save()
     # Role(name='Programmer').save()
     # Expertise(name='python').save()
     # Institute(name='TUD').save()

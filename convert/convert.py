@@ -1,4 +1,5 @@
 import csv
+import os
 
 import spacy
 
@@ -43,7 +44,8 @@ def main() -> int:
 
     #print(data)
     data.merge()
-    data.print_persons()
+    #data.print_persons()
+    data.export(os.environ["NEO4J_BOLT_URL"] + "/expertise")
     return 0
 
 if __name__ == "__main__":

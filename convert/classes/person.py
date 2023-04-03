@@ -1,4 +1,4 @@
-class Person:
+class Personn:
     """
     represents an entry of a person
     most instance variables save the indices of array values in DataAssignment
