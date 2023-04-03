@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_neomodel',
-    'expertise.apps.ExpertiseConfig',
+    'expertise',
+    # 'expertise.apps.ExpertiseConfig',
 ]
 
 MIDDLEWARE = [
