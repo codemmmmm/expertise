@@ -1,7 +1,7 @@
-class Personn:
+class PersonValues:
     """
     represents an entry of a person
-    most instance variables save the indices of array values in DataAssignment
+    the lists save the indices of list values in DataAssignment
     """
     def __init__(self, title: str, name: str, email: str, comment: str) -> None:
         self.title = title

@@ -8,7 +8,7 @@ from spacy import Language
 from spacy.tokens import Doc
 from neomodel import config
 
-from classes.person import Personn
+from classes.person import PersonValues
 from classes import models
 
 class SourceColumns(Enum):
@@ -40,7 +40,7 @@ class DataAssignment:  # better name??? mapping?
     def __init__(self, nlp: Language) -> None:
         self._nlp = nlp
         self._similarity_score = 0.85
-        self._persons: list[Personn] = []
+        self._persons: list[PersonValues] = []
         # after adding all entries the lists must not be changed (elements removed)!!!
         # use list[Doc] when the entries should be compared by semantic similarity
         self._interests: list[Doc] = []
@@ -94,7 +94,7 @@ class DataAssignment:  # better name??? mapping?
         #         email_rating = 1
 
         comment = row[SourceColumns.COMMENT.value]
-        person = Personn(title, name, email, comment)
+        person = PersonValues(title, name, email, comment)
 
         # maybe simply pass the target list?
         interests_indices = self._add_docs(row, SourceColumns.INTEREST, (",", ";"))
@@ -155,7 +155,7 @@ class DataAssignment:  # better name??? mapping?
                     if len(title_from_person_column) < len(title_from_advisor_column):
                         self._persons[index_same_person].title = title_from_advisor_column
                 except ValueError:
-                    new_person = Personn(advisor[0], advisor[1], "", "")
+                    new_person = PersonValues(advisor[0], advisor[1], "", "")
                     self._persons.append(new_person)
                     person.advisors_ids[list_index] = len(self._persons) - 1
 
@@ -349,7 +349,7 @@ class DataAssignment:  # better name??? mapping?
         self,
         person_node: models.Person,
         target: TargetColumns,
-        values: Sequence[Union[Doc, str, Personn]],
+        values: Sequence[Union[Doc, str, PersonValues]],
         indices: list[int],
     ) -> None:
         for index in indices:
