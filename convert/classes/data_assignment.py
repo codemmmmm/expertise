@@ -133,11 +133,15 @@ class DataAssignment:  # better name??? mapping?
 
     def _merge_advisors(self) -> None:
         """
-        if an advisor has the same name as a person then change the advisor index
+        if an advisor has the same (last) name as a person then change the advisor index
         to point to a person entry. else create a new person and point the advisor
         index to that
         """
         for person in self._persons:
+            # TODO: maybe use more than the last name if that is available
+            # e.g. Veronika Scholz and Markus Scholz were wrongly merged
+            # but many persons listed as advisors only have last name listed
+
             # use only the last name of the person to match
             person_names = [x.name.split()[-1].lower() for x in self._persons]
             for list_index, advisor_index in enumerate(person.advisors_ids):
