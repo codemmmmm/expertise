@@ -1,22 +1,54 @@
 {% extends "expertise/base.html" %}
 
+{% block head_js %}
+{% load static %}
+<script defer src="{% static 'expertise/index.js' %}"></script>
+{% endblock %}
+
 {% block title %}Expertise overview{% endblock %}
 
 {% block content %}
 <form class="container-fluid">
     <div class="mb-3">
+        <!-- maybe give instructions for difference between filter and search -->
         <h3>
             <label for="search-filter" class="form-label">Search and filter</label>
         </h3>
-        <select multiple class="form-select" id="search-filter">
-            <option>a</option>
-            <option>b</option>
+        <select class="form-select search-filter" multiple="multiple" name="filters[]">
+            {% for category, values in suggestions.items %}
+            <optgroup label="{{ category }}">
+                {% for suggestion in values %}
+                <option value="{{ suggestion.pk }}">{{ suggestion.name }}</option>
+                {% endfor %}
+            </optgroup>
+            {% endfor %}
         </select>
     </div>
-    <button type="submit" class="btn btn-primary">Search</button>
+    <button type="submit" id="search-button" class="btn btn-primary">Search</button>
 </form>
 
-<table class="persons-table">
+<div class="alert search-alert d-none" role="alert">
+    alert text placeholder that you shouldn't see :&#41
+</div>
+<div class="table-responsive">
+    <table class="persons-table table table-primary">
+        <thead>
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Email</th>
+                <th scope="col">Research interest</th>
+                <th scope="col">Institute</th>
+                <th scope="col">Faculty</th>
+                <th scope="col">Department</th>
+                <th scope="col">Advisor</th>
+                <th scope="col">Role in ScaDS.AI</th>
+                <th scope="col">Offered expertise</th>
+                <th scope="col">Wanted expertise</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
 
-</table>
 {% endblock %}

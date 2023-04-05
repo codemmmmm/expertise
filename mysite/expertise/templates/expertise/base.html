@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <noscript>Please enable JavaScript!</noscript>
+    {% load static %}
+    <link rel="shortcut icon" type="image/png" href="{% static 'expertise/favicon-32x32.png' %}" />
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"
+        integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8="
+        crossorigin="anonymous"></script>
     <!-- bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css"
         rel="stylesheet"
@@ -13,10 +18,16 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
         crossorigin="anonymous"></script>
-    <!-- choices.js -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@9.0.1/public/assets/styles/choices.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/choices.js@9.0.1/public/assets/scripts/choices.min.js"></script>
-    <title>{% block title %}Expertise{% endblock title %}</title>
+    <!-- select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- my files -->
+    {% block extra_css %}
+    <link rel="stylesheet" href="{% static 'expertise/style.css' %}">
+    {% endblock %}
+    {% block head_js %}{% endblock %}
+    <title>{% block title %}Expertise{% endblock %}</title>
 </head>
 
 <body>
@@ -33,7 +44,7 @@
                     <div class="navbar-nav">
                         <!-- TODO: on switching, style the link with class active and add aria-current="page" -->
                         <!-- https://stackoverflow.com/a/39330303/15707077 -->
-                        <a class="nav-link active" aria-current="page" href="/expertise">Home</a>
+                        <a class="nav-link" href="/expertise">Home</a>
                         <a class="nav-link" href="/expertise/edit">Edit</a>
                         <a class="nav-link" href="/admin">Admin</a>
                     </div>

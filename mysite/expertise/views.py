@@ -1,5 +1,6 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
+from neomodel import Q
 
 from expertise.models import (
     Person,
@@ -11,25 +12,116 @@ from expertise.models import (
     Expertise
 )
 
-def index(request):
-    #m = Person(name='Moritz').save()
+def get_suggestions() -> dict:
+    # TODO:
+    # advisors = filter only people that advise someone
+    # offered = filter only what is offered
+    # wanted = filter only what is wanted
+    # maybe with cypher query or somehow filtering nodesets, distinct?
+
+    suggestions = {
+        "Persons": Person.nodes.all(),
+        "Interests": ResearchInterest.nodes.all(),
+        "Institutes": Institute.nodes.all(),
+        "Faculties": Faculty.nodes.all(),
+        "Departments": Department.nodes.all(),
+        "Advisors": Person.nodes.all(),
+        "Roles": Role.nodes.all(),
+        "Offered expertise": Expertise.nodes.all(),
+        "Wanted expertise": Expertise.nodes.all(),
+    }
+    return suggestions
+
+def person_contains_value(person, value) -> bool:
+    # use (person.property or "") in case a person does not have that property
+    return (value in (person.name or "").lower() or
+            value in (person.title or "").lower() or
+            value in (person.email or "").lower())
+
+def person_or_connected_node_contains_value(person, value) -> bool:
+    # in this condition i don't check if email contains the value
+    # because this causes an error (caused by bug in neomodel I believe)
+    person_node_condition = (Q(name__icontains=value) |
+        Q(title__icontains=value))
+
+    return (person_contains_value(person, value) or
+        person.interests.filter(name__icontains=value) or
+        person.institutes.filter(name__icontains=value) or
+        person.faculties.filter(name__icontains=value) or
+        person.departments.filter(name__icontains=value) or
+        person.roles.filter(name__icontains=value) or
+        person.offered_expertise.filter(name__icontains=value) or
+        person.wanted_expertise.filter(name__icontains=value) or
+        person.advisors.filter(person_node_condition))
+
+def get_all_person_values(persons: list) -> list[dict]:
+    entries = []
+    for person in persons:
+        data = {}
+        data["person"] = {
+            "name": person.name,
+            "title": person.title,
+            "email": person.email,
+            "pk": person.pk,
+        }
+        data["interests"] = [inte.name for inte in person.interests.all()]
+        data["institutes"] = [inst.name for inst in person.institutes.all()]
+        data["faculties"] = [fac.name for fac in person.faculties.all()]
+        data["departments"] = [dep.name for dep in person.departments.all()]
+        data["roles"] = [role.name for role in person.roles.all()]
+        data["offered"] = [off.name for off in person.offered_expertise.all()]
+        data["wanted"] = [wanted.name for wanted in person.wanted_expertise.all()]
+        data["advisors"] = [adv.title + " " + adv.name if adv.title else adv.name for adv in person.advisors.all()]
+        entries.append(data)
+
+    return entries
+
+def get_filtered_persons(search_param: str) -> list[dict]:
+    # maybe just use a written cypher query
+    persons = Person.nodes.all()
+    matching_persons = []
+    if search_param == "":
+        matching_persons = persons
+    else:
+        for person in persons:
+            if person_or_connected_node_contains_value(person, search_param):
+                print(person)
+                matching_persons.append(person)
+
+    return get_all_person_values(matching_persons)
+
+def test():
+    # m = Person(name='Moritz').save()
     # s = Person(name='Siavash').save()
     # r = m.advisors.connect(s)
-    #ResearchInterest(name='AI').save()
-    #ResearchInterest(name='AI').save()
+    # ResearchInterest(name='AI').save()
+    # ResearchInterest(name='AI').save()
     # Role(name='Programmer').save()
     # Expertise(name='python').save()
     # Institute(name='TUD').save()
     # Faculty(name='ZIH').save()
     # Department(name='CompSci').save()
 
-    #for p in Person.nodes.all():
+    # for p in Person.nodes.all():
     #    print(p)
-    #return HttpResponse("Hello, world. <h1>hi</h1>You're at the expertise index.")
-    context = {
+    pass
 
+# VIEWS
+
+def index(request):
+    context = {
+        "suggestions": get_suggestions(),
     }
     return render(request, 'expertise/index.html', context)
 
 def edit(request):
     return render(request, 'expertise/edit.html')
+
+def persons(request):
+    # TODO: optimize so I don't get all values of all persons twice
+    search_param = request.GET.get("search", "")
+    persons_data = get_filtered_persons(search_param.lower())
+    context = {
+        "persons": persons_data
+    }
+    return JsonResponse(context)

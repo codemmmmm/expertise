@@ -71,4 +71,3 @@ class Person(DjangoNode):
 
     class Meta:
         app_label = 'expertise'
-
