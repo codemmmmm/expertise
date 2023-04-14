@@ -18,6 +18,7 @@ def get_suggestions() -> dict:
     # offered = filter only what is offered
     # wanted = filter only what is wanted
     # maybe with cypher query or somehow filtering nodesets, distinct?
+    # otherwise, save all persons and expertise in a variable instead of searching twice
 
     suggestions = {
         "Persons": Person.nodes.all(),

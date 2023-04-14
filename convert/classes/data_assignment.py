@@ -221,7 +221,7 @@ class DataAssignment:  # better name??? mapping?
 
     @staticmethod
     def _get_value_to_merge(value: Union[Doc, str]) -> str:
-        """get the string.lower() value"""
+        """get the string.lower() value of Doc or str"""
         text = value.text if isinstance(value, Doc) else value
         return text.lower()
 
@@ -296,10 +296,7 @@ class DataAssignment:  # better name??? mapping?
         return indices_institutes, indices_faculties, indices_departments
 
     def _add_basic_value(self, row: list[str], source_column: SourceColumns, delimiters: Iterable[str]) -> list[int]:
-        """
-        add entries to DataManagement and
-        return indices
-        """
+        """add entries to target list and return indices"""
         entries = row[source_column.value]
         indices = []
         target_list: list[Any]
