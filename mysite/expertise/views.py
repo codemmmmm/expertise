@@ -1,6 +1,9 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
-from neomodel import Q
+from neomodel import Q, db
+from neo4j import GraphDatabase
+import os
+import requests
 
 from expertise.models import (
     Person,
@@ -91,6 +94,43 @@ def get_filtered_persons(search_param: str) -> list[dict]:
 
     return get_all_person_values(matching_persons)
 
+def get_all_close_relations(tx, person_id):
+    records = []
+    result = tx.run("MATCH (p:Person {pk:$pk})-[r*1..2]-(n)"
+                    "RETURN p, r, n", pk=person_id)
+
+    for record in result:
+        records.append(record["r"])
+    return records
+
+def get_graph_data(person_id: str):
+    # TODO: improve this weird splitting
+    full_url = os.environ['NEO4J_BOLT_URL']
+    url = full_url[0:7] + full_url[-14:]
+    user = "neo4j"
+    password = full_url.split("neo4j:")[1][:-15]
+    # print(url)
+    # print(user)
+    # print(password)
+
+    with GraphDatabase.driver(url, auth=(user, password), database="expertise") as driver:
+        with driver.session() as session:
+            graph = session.read_transaction(get_all_close_relations, person_id)
+            #for record in graph:
+             #   print(record)
+
+    # data = {
+    #     "statements": [
+    #         {
+    #             "statement": "MATCH (n)-[r]-(m) RETURN n, r, m LIMIT 5;",
+    #             "resultDataContents": ["graph"],
+    #         },
+    #     ]
+    # }
+
+    # r = requests.post("http://localhost:7474/db/expertise/tx", auth=(user, password), json=data)
+    # return r.json()
+
 def test():
     # m = Person(name='Moritz').save()
     # s = Person(name='Siavash').save()
@@ -122,7 +162,21 @@ def persons(request):
     # TODO: optimize so I don't get all values of all persons twice
     search_param = request.GET.get("search", "")
     persons_data = get_filtered_persons(search_param.lower())
-    context = {
-        "persons": persons_data
+    data = {
+        "persons": persons_data,
     }
-    return JsonResponse(context)
+    return JsonResponse(data)
+
+def graph(request):
+    graph_data = get_graph_data("x")
+    #print(results)
+
+    # for item in results:
+    #     for x in item:
+    #         print(x)
+    #     print("\n")
+    data = {
+        "graph": graph_data,
+    }
+    return JsonResponse(data)
+    #return HttpResponse(data)

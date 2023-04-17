@@ -46,11 +46,12 @@ function search(e) {
             // possibly using outdated search results
             sessionStorage.setItem("persons", JSON.stringify([]));
             updateAlert(null);
-            return
+            return;
         }
         const persons = data.persons;
         //console.log(persons);
         sessionStorage.setItem("persons", JSON.stringify(persons));
+        // persons list should be filtered first
         fillTable(persons);
         updateAlert(persons.length);
     });
@@ -71,12 +72,95 @@ function updateAlert(length) {
     }
 }
 
+function drawGraph(data) {
+    console.log("drawing");
+
+    var nodes = new vis.DataSet([
+        { id: 1, label: "Max Muster" },
+        { id: 2, label: "Jana Schuster von Grafhausen die Dritte" },
+        { id: 3, label: "NLP" },
+        { id: 4, label: "TU Dresden" },
+        { id: 5, label: "Prof. Hagel" },
+    ]);
+
+    var edges = new vis.DataSet([
+        { from: 1, to: 3, label: "WANTS" },
+        { from: 2, to: 3, label: "OFFERS" },
+        { from: 1, to: 2, label: "ADVISED_BY"},
+        { from: 2, to: 4, label: "MEMBER_OF" },
+        { from: 5, to: 4, label: "MEMBER_OF" },
+    ]);
+
+    var container = document.querySelector("#graph");
+    var data = {
+        nodes: nodes,
+        edges: edges,
+    };
+
+    var options = {
+        nodes: {
+            widthConstraint: {
+                maximum: 200,
+            },
+        },
+        edges: {
+            arrows: "to",
+            smooth: true,
+        },
+        physics: {
+            barnesHut: {
+                springConstant: 0.04,
+                // avoidOverlap: 0.1,
+                springLength: 250,
+                // gravitationalConstant: -3000,
+            },
+        },
+    };
+    var network = new vis.Network(container, data, options);
+    container.classList.remove("d-none");
+    const networkEl = document.querySelector(".vis-network");
+    networkEl.classList.add("border", "border-info");
+}
+
+async function getGraph(personId) {
+    const url = "graph";
+    try {
+        const response = await fetch(`${url}?personId=${encodeURIComponent(personId)}`);
+        if (!response.ok) {
+            throw new Error("Network response was not OK");
+        }
+        return response.json();
+    } catch (error) {
+        console.error("There has been a problem with your fetch operation:", error);
+    }
+}
+
+function makeGraph(e) {
+    // clicking the email link won't cause the graph to be drawn
+    if (e.target.nodeName === "A") {
+        return;
+    }
+
+    const personId = e.currentTarget.dataset.id;
+    console.log("getting graph data...");
+    getGraph(personId).then((data) => {
+        if (data === undefined) {
+            console.log("... graph request returned undefined");
+            return;
+        }
+        const graphData = data.graph;
+        console.log(graphData);
+        drawGraph(graphData);
+        // TODO: maybe jump to drawn graph
+    });
+}
+
 function concatTitleName(title, name) {
     return title === "" ? name : title + " " + name;
 }
 
 function appendBasicTableCell(tableRow, values) {
-    // maybe add line breaks after each entry
+    // TODO: add line breaks after each entry?
     td = document.createElement("td");
     td.textContent = values.join(", ");
     tableRow.appendChild(td);
@@ -109,12 +193,16 @@ function fillTable(persons) {
         appendBasicTableCell(tr, p.offered);
         appendBasicTableCell(tr, p.wanted);
 
+        tr.addEventListener("click", makeGraph);
+        // TODO: maybe add role=button to table row
         tableBody.appendChild(tr);
     });
 }
 
 // TODO: add an eventListener which prevents adding more than 1 new search word
 
+// TODO: maybe add a property that saves with category/optgroup it belongsto
+// if that is necessary
 $('.search-filter').select2({
     placeholder: "Select filters or enter new value for searching",
     maximumSelectionLength: 20,
@@ -127,10 +215,11 @@ $('.search-filter').select2({
     debug: true,
 });
 
+// TODO: remove
 $('.search-filter').on('select2:select', function (e) {
     data = $('.search-filter').select2("data");
     data.forEach(element => {
-        //console.log(element);
+        console.log(element);
     });
 });
 
