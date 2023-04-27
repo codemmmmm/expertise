@@ -11,6 +11,7 @@ from expertise.models import (
     Expertise
 )
 
+# prevent deletion because it doesn't work with django_neomodel
 class NoDeleteAdmin:
     def has_delete_permission(self, request, obj=None):
         # disable delete

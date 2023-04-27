@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest
 from neomodel import Q, db
 from neo4j import GraphDatabase
 import os
@@ -23,6 +23,8 @@ def get_suggestions() -> dict:
     # maybe with cypher query or somehow filtering nodesets, distinct?
     # otherwise, save all persons and expertise in a variable instead of searching twice
 
+    # maybe rename the keys to e.g. wanted_expertise and have
+    # as value a dict with optgroup name and value list
     suggestions = {
         "Persons": Person.nodes.all(),
         "Interests": ResearchInterest.nodes.all(),
@@ -81,7 +83,8 @@ def get_all_person_values(persons: list) -> list[dict]:
     return entries
 
 def get_filtered_persons(search_param: str) -> list[dict]:
-    # maybe just use a written cypher query
+    # TODO: optimize so I don't get all values of all persons twice
+    # maybe just use a cypher query
     persons = Person.nodes.all()
     matching_persons = []
     if search_param == "":
@@ -119,18 +122,6 @@ def get_graph_data(person_id: str):
             #for record in graph:
              #   print(record)
 
-    # data = {
-    #     "statements": [
-    #         {
-    #             "statement": "MATCH (n)-[r]-(m) RETURN n, r, m LIMIT 5;",
-    #             "resultDataContents": ["graph"],
-    #         },
-    #     ]
-    # }
-
-    # r = requests.post("http://localhost:7474/db/expertise/tx", auth=(user, password), json=data)
-    # return r.json()
-
 def test():
     # m = Person(name='Moritz').save()
     # s = Person(name='Siavash').save()
@@ -159,7 +150,6 @@ def edit(request):
     return render(request, 'expertise/edit.html')
 
 def persons(request):
-    # TODO: optimize so I don't get all values of all persons twice
     search_param = request.GET.get("search", "")
     persons_data = get_filtered_persons(search_param.lower())
     data = {
@@ -168,6 +158,7 @@ def persons(request):
     return JsonResponse(data)
 
 def graph(request):
+    # TODO: error handling for when no person id is given as parameter
     graph_data = get_graph_data("x")
     #print(results)
 

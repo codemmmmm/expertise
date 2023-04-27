@@ -1,5 +1,5 @@
 function formatLabel(item) {
-    /**display optgroup for items of some optgroups */
+    /**display optgroup before the element for items of some optgroups */
     option = $(item.element);
     optgroup = option.closest('optgroup').attr('label');
     showGroupFor = ["Persons", "Advisors", "Offered expertise", "Wanted expertise"];
@@ -123,6 +123,7 @@ function drawGraph(data) {
 }
 
 async function getGraph(personId) {
+    // what happens in case of timeout?
     const url = "graph";
     try {
         const response = await fetch(`${url}?personId=${encodeURIComponent(personId)}`);
@@ -171,7 +172,7 @@ function fillTable(persons) {
     // remove all children
     tableBody.replaceChildren();
     persons.forEach((p) => {
-        tr = document.createElement("tr");
+        const tr = document.createElement("tr");
         tr.dataset.pk = p.person.pk;
         personEl = document.createElement("td");
         personEl.textContent = concatTitleName(p.person.title, p.person.name);
@@ -201,8 +202,10 @@ function fillTable(persons) {
 
 // TODO: add an eventListener which prevents adding more than 1 new search word
 
-// TODO: maybe add a property that saves with category/optgroup it belongsto
+// TODO: maybe add a property that saves with category/optgroup it belongs to
 // if that is necessary
+// TODO: I think the primary key of the entities should be mapped so
+// select2 knows which the primary key is? probably as value of the option?
 $('.search-filter').select2({
     placeholder: "Select filters or enter new value for searching",
     maximumSelectionLength: 20,
@@ -213,11 +216,14 @@ $('.search-filter').select2({
     minimumInputLength: 1, // not sure if this is good
     createTag: createTag,
     debug: true,
+    width: "100%",
 });
 
 // TODO: remove
+// for logging
 $('.search-filter').on('select2:select', function (e) {
     data = $('.search-filter').select2("data");
+    console.log("all selected elements:");
     data.forEach(element => {
         console.log(element);
     });

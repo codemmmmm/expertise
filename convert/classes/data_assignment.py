@@ -148,7 +148,7 @@ class DataAssignment:  # better name??? mapping?
                 advisor = self._advisors[advisor_index]
                 try:
                     index_same_person = person_names.index(advisor[1].split()[-1].lower())
-                    # TODO: search again but allow a single letter difference
+                    # TODO: search again but allow a single letter difference?
                     # replace reference to an advisor id with a person id
                     person.advisors_ids[list_index] = index_same_person
 
