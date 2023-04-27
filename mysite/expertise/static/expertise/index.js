@@ -1,10 +1,12 @@
+"use strict";
+
 function formatLabel(item) {
     /**display optgroup before the element for items of some optgroups */
-    option = $(item.element);
-    optgroup = option.closest('optgroup').attr('label');
-    showGroupFor = ["Persons", "Advisors", "Offered expertise", "Wanted expertise"];
+    const option = $(item.element);
+    const optgroup = option.closest('optgroup').attr('label');
+    const showGroupFor = ["Persons", "Advisors", "Offered expertise", "Wanted expertise"];
     return showGroupFor.includes(optgroup) ? optgroup + ' | ' + item.text : item.text;
-};
+}
 
 function createTag(params) {
     var term = $.trim(params.term);
@@ -75,7 +77,7 @@ function updateAlert(length) {
 function drawGraph(data) {
     console.log("drawing");
 
-    var nodes = new vis.DataSet([
+    const nodes = new vis.DataSet([
         { id: 1, label: "Max Muster" },
         { id: 2, label: "Jana Schuster von Grafhausen die Dritte" },
         { id: 3, label: "NLP" },
@@ -83,7 +85,7 @@ function drawGraph(data) {
         { id: 5, label: "Prof. Hagel" },
     ]);
 
-    var edges = new vis.DataSet([
+    const edges = new vis.DataSet([
         { from: 1, to: 3, label: "WANTS" },
         { from: 2, to: 3, label: "OFFERS" },
         { from: 1, to: 2, label: "ADVISED_BY"},
@@ -91,13 +93,14 @@ function drawGraph(data) {
         { from: 5, to: 4, label: "MEMBER_OF" },
     ]);
 
-    var container = document.querySelector("#graph");
+    const container = document.querySelector("#graph");
+    // TODO remove
     var data = {
         nodes: nodes,
         edges: edges,
     };
 
-    var options = {
+    const options = {
         nodes: {
             widthConstraint: {
                 maximum: 200,
@@ -116,7 +119,7 @@ function drawGraph(data) {
             },
         },
     };
-    var network = new vis.Network(container, data, options);
+    const network = new vis.Network(container, data, options);
     container.classList.remove("d-none");
     const networkEl = document.querySelector(".vis-network");
     networkEl.classList.add("border", "border-info");
@@ -162,7 +165,7 @@ function concatTitleName(title, name) {
 
 function appendBasicTableCell(tableRow, values) {
     // TODO: add line breaks after each entry?
-    td = document.createElement("td");
+    const td = document.createElement("td");
     td.textContent = values.join(", ");
     tableRow.appendChild(td);
 }
@@ -174,12 +177,12 @@ function fillTable(persons) {
     persons.forEach((p) => {
         const tr = document.createElement("tr");
         tr.dataset.pk = p.person.pk;
-        personEl = document.createElement("td");
+        const personEl = document.createElement("td");
         personEl.textContent = concatTitleName(p.person.title, p.person.name);
         tr.appendChild(personEl);
 
-        emailEl = document.createElement("td");
-        emailLink = document.createElement("a");
+        const emailEl = document.createElement("td");
+        const emailLink = document.createElement("a");
         emailLink.href = "mailto:" + p.person.email;
         emailLink.textContent = p.person.email;
         emailEl.appendChild(emailLink);
@@ -221,8 +224,8 @@ $('.search-filter').select2({
 
 // TODO: remove
 // for logging
-$('.search-filter').on('select2:select', function (e) {
-    data = $('.search-filter').select2("data");
+$('.search-filter').on('select2:select', function () {
+    const data = $('.search-filter').select2("data");
     console.log("all selected elements:");
     data.forEach(element => {
         console.log(element);
