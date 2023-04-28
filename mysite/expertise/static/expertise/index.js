@@ -21,6 +21,14 @@ function createTag(params) {
     };
 }
 
+function showLoading(button) {
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Searching...';
+}
+
+function hideLoading(button) {
+    button.textContent = "Search";
+}
+
 async function getPersons(searchWord) {
     const url = "persons";
     try {
@@ -35,8 +43,8 @@ async function getPersons(searchWord) {
 }
 
 function search(e) {
-    // TODO: add spinner on search button
     e.preventDefault();
+    showLoading(e.target);
     // get search parameter
     const selections = $('.search-filter').select2("data");
     const searchSelection = selections.find((element) => element.newTag === true);
@@ -53,6 +61,7 @@ function search(e) {
         const persons = data.persons;
         //console.log(persons);
         sessionStorage.setItem("persons", JSON.stringify(persons));
+        hideLoading(e.target);
         // persons list should be filtered first
         fillTable(persons);
         updateAlert(persons.length);
@@ -119,7 +128,7 @@ function drawGraph(data) {
             },
         },
     };
-    const network = new vis.Network(container, data, options);
+    new vis.Network(container, data, options);
     container.classList.remove("d-none");
     const networkEl = document.querySelector(".vis-network");
     networkEl.classList.add("border", "border-info");
