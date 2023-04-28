@@ -122,6 +122,12 @@ def get_graph_data(person_id: str):
             #for record in graph:
              #   print(record)
 
+def get_nav_active_data() -> dict:
+    return {
+        "class": "active",
+        "aria": "aria-current=page",
+    }
+
 def test():
     # m = Person(name='Moritz').save()
     # s = Person(name='Siavash').save()
@@ -143,11 +149,15 @@ def test():
 def index(request):
     context = {
         "suggestions": get_suggestions(),
+        "nav_home": get_nav_active_data(),
     }
     return render(request, 'expertise/index.html', context)
 
 def edit(request):
-    return render(request, 'expertise/edit.html')
+    context = {
+        "nav_edit": get_nav_active_data(),
+    }
+    return render(request, 'expertise/edit.html', context)
 
 def persons(request):
     search_param = request.GET.get("search", "")

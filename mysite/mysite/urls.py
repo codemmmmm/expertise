@@ -19,7 +19,6 @@ from django.urls import include, path
 urlpatterns = [
     path('expertise/', include('expertise.urls')),
     path('admin/', admin.site.urls),
-    # redirect home page to expertise
-    # not sure if it's a good idea
-    #path('', include('expertise.urls')),
+    # redirect project home page to expertise app
+    path('', include('expertise.urls')),
 ]

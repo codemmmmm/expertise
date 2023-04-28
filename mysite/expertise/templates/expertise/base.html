@@ -37,7 +37,7 @@
 <body>
     <div id="navbar">
         {% block navbar %}
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <nav class="navbar navbar-expand-sm navbar-dark bg-primary">
             <div class="container-fluid">
                 <a class="navbar-brand" href="/expertise">Expertise</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup"
@@ -46,10 +46,8 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
                     <div class="navbar-nav">
-                        <!-- TODO: on switching, style the link with class active and add aria-current="page" -->
-                        <!-- https://stackoverflow.com/a/39330303/15707077 -->
-                        <a class="nav-link" href="/expertise">Home</a>
-                        <a class="nav-link" href="/expertise/edit">Edit</a>
+                        <a class="nav-link {{nav_home.class}}" {{nav_home.aria}} href="/expertise">Home</a>
+                        <a class="nav-link {{nav_edit.class}}" {{nav_edit.aria}} href="/expertise/edit">Edit</a>
                         <a class="nav-link" href="/admin">Admin</a>
                     </div>
                 </div>
