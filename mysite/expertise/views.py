@@ -23,18 +23,43 @@ def get_suggestions() -> dict:
     # maybe with cypher query or somehow filtering nodesets, distinct?
     # otherwise, save all persons and expertise in a variable instead of searching twice
 
-    # maybe rename the keys to e.g. wanted_expertise and have
-    # as value a dict with optgroup name and value list
     suggestions = {
-        "Persons": Person.nodes.all(),
-        "Interests": ResearchInterest.nodes.all(),
-        "Institutes": Institute.nodes.all(),
-        "Faculties": Faculty.nodes.all(),
-        "Departments": Department.nodes.all(),
-        "Advisors": Person.nodes.all(),
-        "Roles": Role.nodes.all(),
-        "Offered expertise": Expertise.nodes.all(),
-        "Wanted expertise": Expertise.nodes.all(),
+        "persons": {
+            "group": "Persons",
+            "options": Person.nodes.all(),
+        },
+        "interests": {
+            "group": "Interests",
+            "options": ResearchInterest.nodes.all(),
+        },
+        "institutes": {
+            "group": "Institutes",
+            "options": Institute.nodes.all(),
+        },
+        "faculties": {
+            "group": "Faculties",
+            "options": Faculty.nodes.all(),
+        },
+        "departments": {
+            "group": "Departments",
+            "options": Department.nodes.all(),
+        },
+        "advisors": {
+            "group": "Advisors",
+            "options": Person.nodes.all(),
+        },
+        "roles": {
+            "group": "Roles",
+            "options": Role.nodes.all(),
+        },
+        "offered_expertise": {
+            "group": "Offered expertise",
+            "options": Expertise.nodes.all(),
+        },
+        "wanted_expertise": {
+            "group": "Wanted expertise",
+            "options": Expertise.nodes.all(),
+        },
     }
     return suggestions
 
@@ -123,6 +148,7 @@ def get_graph_data(person_id: str):
              #   print(record)
 
 def get_nav_active_data() -> dict:
+    # maybe this should be a constant variable somewhere instead?
     return {
         "class": "active",
         "aria": "aria-current=page",

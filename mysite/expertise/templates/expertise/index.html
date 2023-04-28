@@ -15,9 +15,9 @@
             <label for="search-filter" class="form-label">Search and filter</label>
         </h3>
         <select class="form-select search-filter" multiple="multiple" name="filters[]">
-            {% for category, values in suggestions.items %}
-            <optgroup label="{{ category }}">
-                {% for suggestion in values %}
+            {% for item in suggestions.values %}
+            <optgroup label="{{ item.group }}">
+                {% for suggestion in item.options %}
                 <option value="{{ suggestion.pk }}">{{ suggestion.name }}</option>
                 {% endfor %}
             </optgroup>

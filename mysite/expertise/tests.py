@@ -34,15 +34,23 @@ class IndexViewTestCase(TestCase):
         response = self.client.get("/expertise/")
         suggestions = response.context["suggestions"]
 
-        self.assertEqual(2, len(suggestions["Persons"]))
-        self.assertEqual(1, len(suggestions["Interests"]))
-        self.assertEqual(1, len(suggestions["Institutes"]))
-        self.assertEqual(1, len(suggestions["Faculties"]))
-        self.assertEqual(1, len(suggestions["Departments"]))
-        self.assertEqual(2, len(suggestions["Advisors"]))
-        self.assertEqual(1, len(suggestions["Roles"]))
-        self.assertEqual(2, len(suggestions["Offered expertise"]))
-        self.assertEqual(2, len(suggestions["Wanted expertise"]))
+        self.assertEqual(2, len(suggestions["persons"]["options"]))
+        self.assertEqual(1, len(suggestions["interests"]["options"]))
+        self.assertEqual(1, len(suggestions["institutes"]["options"]))
+        self.assertEqual(1, len(suggestions["faculties"]["options"]))
+        self.assertEqual(1, len(suggestions["departments"]["options"]))
+        self.assertEqual(2, len(suggestions["advisors"]["options"]))
+        self.assertEqual(1, len(suggestions["roles"]["options"]))
+        self.assertEqual(2, len(suggestions["offered_expertise"]["options"]))
+        self.assertEqual(2, len(suggestions["wanted_expertise"]["options"]))
+
+    def test_suggestions_format(self):
+        response = self.client.get("/expertise/")
+        suggestions = response.context["suggestions"]
+
+        for key in suggestions:
+            self.assertIn("group", suggestions[key])
+            self.assertIn("options", suggestions[key])
 
     def test_used_template(self):
         response = self.client.get("/expertise/")

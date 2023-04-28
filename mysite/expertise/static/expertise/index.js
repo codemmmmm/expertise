@@ -132,6 +132,7 @@ function drawGraph(data) {
     container.classList.remove("d-none");
     const networkEl = document.querySelector(".vis-network");
     networkEl.classList.add("border", "border-info");
+    container.scrollIntoView();
 }
 
 async function getGraph(personId) {
@@ -164,7 +165,6 @@ function makeGraph(e) {
         const graphData = data.graph;
         console.log(graphData);
         drawGraph(graphData);
-        // TODO: maybe jump to drawn graph
     });
 }
 
@@ -207,17 +207,16 @@ function fillTable(persons) {
         appendBasicTableCell(tr, p.wanted);
 
         tr.addEventListener("click", makeGraph);
-        // TODO: maybe add role=button to table row
+        tr.setAttribute("role", "button");
         tableBody.appendChild(tr);
     });
 }
 
 // TODO: add an eventListener which prevents adding more than 1 new search word
+// better: https://select2.org/tagging#constraining-tag-creation
 
 // TODO: maybe add a property that saves with category/optgroup it belongs to
 // if that is necessary
-// TODO: I think the primary key of the entities should be mapped so
-// select2 knows which the primary key is? probably as value of the option?
 $('.search-filter').select2({
     placeholder: "Select filters or enter new value for searching",
     maximumSelectionLength: 20,
