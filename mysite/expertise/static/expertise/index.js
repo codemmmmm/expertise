@@ -1,14 +1,28 @@
 "use strict";
 
 function formatLabel(item) {
-    /**display optgroup before the element for items of some optgroups */
+    /**display optgroup name before the element for items of some optgroups */
+    const labels = {
+        "Persons": "Person",
+        "Advisors": "Advisor",
+        "Offered expertise": "Offered",
+        "Wanted expertise": "Wanted",
+    };
+
     const option = $(item.element);
     const optgroup = option.closest('optgroup').attr('label');
-    const showGroupFor = ["Persons", "Advisors", "Offered expertise", "Wanted expertise"];
-    return showGroupFor.includes(optgroup) ? optgroup + ' | ' + item.text : item.text;
+    const label = labels[optgroup];
+    return label ? label + ' | ' + item.text : item.text;
 }
 
 function createTag(params) {
+    // don't allow more than one tag (= search word)
+    const selections = $('.search-filter').select2("data");
+    const searchSelection = selections.find((element) => element.newTag === true);
+    if (searchSelection) {
+        return null;
+    }
+
     var term = $.trim(params.term);
     if (term === '') {
         return null;
@@ -212,9 +226,6 @@ function fillTable(persons) {
     });
 }
 
-// TODO: add an eventListener which prevents adding more than 1 new search word
-// better: https://select2.org/tagging#constraining-tag-creation
-
 // TODO: maybe add a property that saves with category/optgroup it belongs to
 // if that is necessary
 $('.search-filter').select2({
@@ -224,7 +235,6 @@ $('.search-filter').select2({
     tokenSeparators: [','],
     allowClear: true,
     templateSelection: formatLabel,
-    minimumInputLength: 1, // not sure if this is good
     createTag: createTag,
     debug: true,
     width: "100%",

@@ -15,10 +15,10 @@
             <label for="search-filter" class="form-label">Search and filter</label>
         </h3>
         <select class="form-select search-filter" multiple="multiple" name="filters[]">
-            {% for item in suggestions.values %}
+            {% for key, item in suggestions.items %}
             <optgroup label="{{ item.group }}">
                 {% for suggestion in item.options %}
-                <option value="{{ suggestion.pk }}">{{ suggestion.name }}</option>
+                <option value="{{ key|slice:":4" }}-{{ suggestion.pk }}">{{ suggestion.name }}</option>
                 {% endfor %}
             </optgroup>
             {% endfor %}
