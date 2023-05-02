@@ -117,7 +117,6 @@ def get_filtered_persons(search_param: str) -> list[dict]:
     else:
         for person in persons:
             if person_or_connected_node_contains_value(person, search_param):
-                print(person)
                 matching_persons.append(person)
 
     return get_all_person_values(matching_persons)
@@ -132,6 +131,8 @@ def get_all_close_relations(tx, person_id):
     return records
 
 def get_graph_data(person_id: str):
+    # TODO: return error for person doesn't exist
+
     # TODO: improve this weird splitting
     full_url = os.environ['NEO4J_BOLT_URL']
     url = full_url[0:7] + full_url[-14:]
@@ -186,24 +187,25 @@ def edit(request):
     return render(request, 'expertise/edit.html', context)
 
 def persons(request):
-    search_param = request.GET.get("search", "")
+    data = {}
+    if "search" not in request.GET:
+        data["error"] = "missing parameter: search"
+        return JsonResponse(data)
+
+    search_param = request.GET.get("search")
     persons_data = get_filtered_persons(search_param.lower())
-    data = {
-        "persons": persons_data,
-    }
+    data["persons"] = persons_data
     return JsonResponse(data)
 
 def graph(request):
-    # TODO: error handling for when no person id is given as parameter
-    graph_data = get_graph_data("x")
-    #print(results)
+    data = {}
+    person_id = request.GET.get("person")
+    if person_id == None or person_id == "":
+        # maybe different errors for missing parameter and missing value
+        data["error"] = "missing parameter: person"
+        return JsonResponse(data)
 
-    # for item in results:
-    #     for x in item:
-    #         print(x)
-    #     print("\n")
-    data = {
-        "graph": graph_data,
-    }
+    person_id = request.GET.get("person")
+    graph_data = get_graph_data(person_id)
+    data["graph"] = graph_data
     return JsonResponse(data)
-    #return HttpResponse(data)
