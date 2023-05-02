@@ -70,6 +70,7 @@ function search(e) {
             // possibly using outdated search results
             sessionStorage.setItem("persons", JSON.stringify([]));
             updateAlert(null);
+            hideLoading(e.target);
             return;
         }
         const persons = data.persons;
