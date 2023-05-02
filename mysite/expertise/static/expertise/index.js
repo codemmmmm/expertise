@@ -194,6 +194,15 @@ function appendBasicTableCell(tableRow, values) {
     tableRow.appendChild(td);
 }
 
+function appendEmailCell(tableRow, email) {
+    const emailEl = document.createElement("td");
+    const emailLink = document.createElement("a");
+    emailLink.href = "mailto:" + email;
+    emailLink.textContent = email;
+    emailEl.appendChild(emailLink);
+    tableRow.appendChild(emailEl);
+}
+
 function fillTable(persons) {
     const tableBody = document.querySelector(".persons-table tbody");
     // remove all children
@@ -205,13 +214,7 @@ function fillTable(persons) {
         personEl.textContent = concatTitleName(p.person.title, p.person.name);
         tr.appendChild(personEl);
 
-        const emailEl = document.createElement("td");
-        const emailLink = document.createElement("a");
-        emailLink.href = "mailto:" + p.person.email;
-        emailLink.textContent = p.person.email;
-        emailEl.appendChild(emailLink);
-        tr.appendChild(emailEl);
-
+        appendEmailCell(tr, p.person.email);
         appendBasicTableCell(tr, p.interests);
         appendBasicTableCell(tr, p.institutes);
         appendBasicTableCell(tr, p.faculties);
