@@ -70,7 +70,7 @@ def person_contains_value(person, value) -> bool:
             value in (person.email or "").lower())
 
 def person_or_connected_node_contains_value(person, value) -> bool:
-    # in this condition i don't check if email contains the value
+    # in this condition I don't check if email contains the value
     # because this causes an error (caused by bug in neomodel I believe)
     person_node_condition = (Q(name__icontains=value) |
         Q(title__icontains=value))
@@ -85,6 +85,9 @@ def person_or_connected_node_contains_value(person, value) -> bool:
         person.wanted_expertise.filter(name__icontains=value) or
         person.advisors.filter(person_node_condition))
 
+def convert_node_list(nodes) -> list[tuple]:
+    return [{"name": node.name, "pk": node.pk} for node in nodes]
+
 def get_all_person_values(persons: list) -> list[dict]:
     entries = []
     for person in persons:
@@ -95,14 +98,15 @@ def get_all_person_values(persons: list) -> list[dict]:
             "email": person.email,
             "pk": person.pk,
         }
-        data["interests"] = [inte.name for inte in person.interests.all()]
-        data["institutes"] = [inst.name for inst in person.institutes.all()]
-        data["faculties"] = [fac.name for fac in person.faculties.all()]
-        data["departments"] = [dep.name for dep in person.departments.all()]
-        data["roles"] = [role.name for role in person.roles.all()]
-        data["offered"] = [off.name for off in person.offered_expertise.all()]
-        data["wanted"] = [wanted.name for wanted in person.wanted_expertise.all()]
-        data["advisors"] = [adv.title + " " + adv.name if adv.title else adv.name for adv in person.advisors.all()]
+        data["interests"] = convert_node_list(person.interests.all())
+        data["institutes"] = convert_node_list(person.institutes.all())
+        data["faculties"] = convert_node_list(person.faculties.all())
+        data["departments"] = convert_node_list(person.departments.all())
+        data["roles"] = convert_node_list(person.roles.all())
+        data["offered"] = convert_node_list(person.offered_expertise.all())
+        data["wanted"] = convert_node_list(person.wanted_expertise.all())
+        data["advisors"] = [{"name": adv.name, "title": adv.title, "pk": adv.pk}
+                            for adv in person.advisors.all()]
         entries.append(data)
 
     return entries

@@ -16,9 +16,9 @@ function formatLabel(item) {
 }
 
 function createTag(params) {
-    // don't allow more than one tag (= search word)
     const selections = $('.search-filter').select2("data");
     const searchSelection = selections.find((element) => element.newTag === true);
+    // don't allow more than one tag (= search word)
     if (searchSelection) {
         return null;
     }
@@ -77,8 +77,7 @@ function search(e) {
         //console.log(persons);
         sessionStorage.setItem("persons", JSON.stringify(persons));
         hideLoading(e.target);
-        // persons list should be filtered first
-        fillTable(persons);
+        fillTable(filter_persons(persons));
         updateAlert(persons.length);
     });
 }
@@ -183,14 +182,85 @@ function makeGraph(e) {
     });
 }
 
+function group_filters(filters, id) {
+    return filters.filter((filter) => filter.id.substring(0, 4) === id);
+}
+
+/**
+ * return true if any of the values is in the filters list or if filters list is empty
+ * @param {Array} filters
+ * @param {Array} values
+ * @returns {boolean}
+ */
+function isMatching(filters, values) {
+    if (filters.length === 0) {
+        return true;
+    }
+
+    // values.forEach can't be used because you can't return from inside it
+    for (const value of values) {
+        if (filters.some((filter) => filter.id.slice(5) === value.pk)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function isMatchingPerson(filters, person) {
+    if (filters.length === 0) {
+        return true;
+    }
+
+    if (filters.some((filter) => filter.id.slice(5) === person.pk)) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * returns filtered array of persons.
+ * @param {Array} persons
+ */
+function filter_persons(persons) {
+    const selections = $('.search-filter').select2("data");
+    // excluding the user created selections here is only necessary
+    // because a user might create a tag with e.g. the value "inst-xxx"
+    const filters = selections.filter((element) => element.newTag === undefined);
+
+    // group the filters by category
+    // the id is the key prepended to the suggestions in the Django template
+    const person_filters = group_filters(filters, "pers");
+    const interests_filters = group_filters(filters, "inte");
+    const institutes_filters = group_filters(filters, "inst");
+    const faculties_filters = group_filters(filters, "facu");
+    const departments_filters = group_filters(filters, "depa");
+    const roles_filters = group_filters(filters, "role");
+    const advisors_filters = group_filters(filters, "advi");
+    const offered_filters = group_filters(filters, "offe");
+    const wanted_filters = group_filters(filters, "want");
+
+    const filtered = persons.filter((person) => {
+        return isMatchingPerson(person_filters, person.person) &&
+            isMatching(interests_filters, person.interests) &&
+            isMatching(institutes_filters, person.institutes) &&
+            isMatching(faculties_filters, person.faculties) &&
+            isMatching(departments_filters, person.departments) &&
+            isMatching(roles_filters, person.roles) &&
+            isMatching(advisors_filters, person.advisors) &&
+            isMatching(offered_filters, person.offered) &&
+            isMatching(wanted_filters, person.wanted);
+    });
+    return filtered;
+}
+
 function concatTitleName(title, name) {
     return title === "" ? name : title + " " + name;
 }
 
 function appendBasicTableCell(tableRow, values) {
-    // TODO: add line breaks after each entry?
+    // TODO: add line breaks or something after each entry?
     const td = document.createElement("td");
-    td.textContent = values.join(", ");
+    td.textContent = values.map((value) => value.name).join(", ");
     tableRow.appendChild(td);
 }
 
@@ -219,6 +289,7 @@ function fillTable(persons) {
         appendBasicTableCell(tr, p.institutes);
         appendBasicTableCell(tr, p.faculties);
         appendBasicTableCell(tr, p.departments);
+        // should advisor titles be shown?
         appendBasicTableCell(tr, p.advisors);
         appendBasicTableCell(tr, p.roles);
         appendBasicTableCell(tr, p.offered);
@@ -230,8 +301,6 @@ function fillTable(persons) {
     });
 }
 
-// TODO: maybe add a property that saves with category/optgroup it belongs to
-// if that is necessary
 $('.search-filter').select2({
     placeholder: "Select filters or enter new value for searching",
     maximumSelectionLength: 20,
@@ -244,15 +313,15 @@ $('.search-filter').select2({
     width: "100%",
 });
 
-// TODO: remove
-// for logging
-$('.search-filter').on('select2:select', function () {
-    const data = $('.search-filter').select2("data");
-    console.log("all selected elements:");
-    data.forEach(element => {
-        console.log(element);
-    });
+$('.search-filter').on('change', function () {
+    const persons = JSON.parse(sessionStorage.getItem("persons")) ?? [];
+    fillTable(filter_persons(persons));
 });
 
 const searchEl = document.querySelector("#search-button");
 searchEl.addEventListener("click", search);
+
+// after refreshing the page the user should have to search again
+// if I don't clear the storage it would show the results of the
+// previous search as soon as a search word or filter is entered
+sessionStorage.removeItem("persons");
