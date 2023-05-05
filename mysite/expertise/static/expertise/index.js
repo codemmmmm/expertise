@@ -10,13 +10,13 @@ function formatLabel(item) {
     };
 
     const option = $(item.element);
-    const optgroup = option.closest('optgroup').attr('label');
+    const optgroup = option.closest("optgroup").attr("label");
     const label = labels[optgroup];
-    return label ? label + ' | ' + item.text : item.text;
+    return label ? label + " | " + item.text : item.text;
 }
 
 function createTag(params) {
-    const selections = $('.search-filter').select2("data");
+    const selections = $(".search-filter").select2("data");
     const searchSelection = selections.find((element) => element.newTag === true);
     // don't allow more than one tag (= search word)
     if (searchSelection) {
@@ -24,7 +24,7 @@ function createTag(params) {
     }
 
     var term = $.trim(params.term);
-    if (term === '') {
+    if (term === "") {
         return null;
     }
 
@@ -36,7 +36,7 @@ function createTag(params) {
 }
 
 function showLoading(button) {
-    button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Searching...';
+    button.innerHTML = "<span class=\"spinner-border spinner-border-sm me-1\" role=\"status\" aria-hidden=\"true\"></span>Searching...";
 }
 
 function hideLoading(button) {
@@ -60,7 +60,7 @@ function search(e) {
     e.preventDefault();
     showLoading(e.target);
     // get search parameter
-    const selections = $('.search-filter').select2("data");
+    const selections = $(".search-filter").select2("data");
     const searchSelection = selections.find((element) => element.newTag === true);
     const searchWord = searchSelection === undefined ? "" : searchSelection.text;
 
@@ -97,54 +97,87 @@ function updateAlert(length) {
     }
 }
 
-function drawGraph(data) {
-    console.log("drawing");
+function drawG6Graph(data, containerId){
+    const nodes = [
+        { id: "1", label: "Max Muster" },
+        { id: "2", label: "Jana Schuster von Grafhausen die Dritte" },
+        { id: "3", label: "NLP" },
+        { id: "4", label: "TU Dresden" },
+        { id: "5", label: "Prof. Hagel" },
+    ];
 
-    const nodes = new vis.DataSet([
-        { id: 1, label: "Max Muster" },
-        { id: 2, label: "Jana Schuster von Grafhausen die Dritte" },
-        { id: 3, label: "NLP" },
-        { id: 4, label: "TU Dresden" },
-        { id: 5, label: "Prof. Hagel" },
-    ]);
+    const edges = [
+        { source: "1", target: "3", label: "WANTS" },
+        { source: "2", target: "3", label: "OFFERS" },
+        { source: "1", target: "2", label: "ADVISED_BY" },
+        { source: "2", target: "4", label: "MEMBER_OF" },
+        { source: "5", target: "4", label: "MEMBER_OF" },
+    ];
 
-    const edges = new vis.DataSet([
-        { from: 1, to: 3, label: "WANTS" },
-        { from: 2, to: 3, label: "OFFERS" },
-        { from: 1, to: 2, label: "ADVISED_BY"},
-        { from: 2, to: 4, label: "MEMBER_OF" },
-        { from: 5, to: 4, label: "MEMBER_OF" },
-    ]);
-
-    const container = document.querySelector("#graph");
     // TODO remove
-    var data = {
+    data = {
         nodes: nodes,
         edges: edges,
     };
 
-    const options = {
-        nodes: {
-            widthConstraint: {
-                maximum: 200,
+    const graph = new G6.Graph({
+        container: containerId,
+        width: 2000,
+        height: 800,
+        defaultNode: {
+            type: "ellipse",
+            color: "#5B8FF9",
+            style: {
+                fill: "#9EC9FF",
+                lineWidth: 1,
             },
         },
-        edges: {
-            arrows: "to",
-            smooth: true,
-        },
-        physics: {
-            barnesHut: {
-                springConstant: 0.04,
-                // avoidOverlap: 0.1,
-                springLength: 250,
-                // gravitationalConstant: -3000,
+        defaultEdge: {
+            style: {
+                stroke: "#7fb0f1",
+                // TODO: fill arrow or make more obvious in other ways
+                endArrow: true,
             },
         },
-    };
-    new vis.Network(container, data, options);
+        renderer: "svg",
+        layout: {
+            type: "force2",
+            animate: false,
+            maxSpeed: 100,
+            linkDistance: 300,
+            //preventOverlap: true,
+        },
+        modes: {
+            // TODO: make highlight only on click?
+            default: ["drag-canvas", "zoom-canvas", "activate-relations", "drag-node"],
+        },
+    });
+
+    graph.data(data);
+    graph.render();
+
+    // the resizing for long labels is called in this event or otherwise
+    // it won't work with SVG (likely because it isn't drawn right after function call)
+    graph.on("afterrender", () => {
+        graph.getNodes().forEach((node) => {
+            // find the text shape by its name
+            const labelShape = node.getContainer().find((e) => e.get("name") === "text-shape");
+            // get the bounding box of the label
+            const labelBBox = labelShape.getBBox();
+            graph.updateItem(node, {
+                size: [labelBBox.width + 15, labelBBox.height + 15],
+            });
+        });
+    });
+}
+
+function showGraph(data) {
+    const containerId = "graph-container";
+    const container = document.querySelector("#" + containerId);
+    drawG6Graph(data, containerId);
+
     container.classList.remove("d-none");
-    const networkEl = document.querySelector(".vis-network");
+    const networkEl = document.querySelector("#" + containerId + " > svg");
     networkEl.classList.add("border", "border-info");
     container.scrollIntoView();
 }
@@ -178,7 +211,7 @@ function makeGraph(e) {
         }
         const graphData = data.graph;
         console.log(graphData);
-        drawGraph(graphData);
+        showGraph(graphData);
     });
 }
 
@@ -222,7 +255,7 @@ function isMatchingPerson(filters, person) {
  * @param {Array} persons
  */
 function filter_persons(persons) {
-    const selections = $('.search-filter').select2("data");
+    const selections = $(".search-filter").select2("data");
     // excluding the user created selections here is only necessary
     // because a user might create a tag with e.g. the value "inst-xxx"
     const filters = selections.filter((element) => element.newTag === undefined);
@@ -316,11 +349,11 @@ function fillTable(persons) {
     });
 }
 
-$('.search-filter').select2({
+$(".search-filter").select2({
     placeholder: "Select filters or enter new value for searching",
     maximumSelectionLength: 20,
     tags: true,
-    tokenSeparators: [','],
+    tokenSeparators: [","],
     allowClear: true,
     templateSelection: formatLabel,
     createTag: createTag,
@@ -328,7 +361,7 @@ $('.search-filter').select2({
     width: "100%",
 });
 
-$('.search-filter').on('change', function () {
+$(".search-filter").on("change", function () {
     const persons = JSON.parse(sessionStorage.getItem("persons")) ?? [];
     fillTable(filter_persons(persons));
 });

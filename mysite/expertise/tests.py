@@ -59,3 +59,5 @@ class IndexViewTestCase(TestCase):
         self.assertEqual("expertise/index.html", templates[0].name)
         self.assertEqual("expertise/base.html", templates[1].name)
 
+# test missing parameters for the APIs...
+
