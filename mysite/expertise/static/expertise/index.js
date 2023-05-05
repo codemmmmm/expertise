@@ -257,14 +257,25 @@ function concatTitleName(title, name) {
     return title === "" ? name : title + " " + name;
 }
 
+function makePill(text, id) {
+    const pill = document.createElement("span");
+    pill.classList.add("pill");
+    pill.textContent = text;
+    // TODO: add category to id?
+    pill.dataset.pk = id;
+    return pill;
+}
+
 function appendBasicTableCell(tableRow, values) {
-    // TODO: add line breaks or something after each entry?
     const td = document.createElement("td");
-    td.textContent = values.map((value) => value.name).join(", ");
+    values.forEach((value) => {
+        td.appendChild(makePill(value.name, value.pk));
+    });
     tableRow.appendChild(td);
 }
 
 function appendEmailCell(tableRow, email) {
+    // TODO: if email empty, don't create a link
     const emailEl = document.createElement("td");
     const emailLink = document.createElement("a");
     emailLink.href = "mailto:" + email;
@@ -274,14 +285,18 @@ function appendEmailCell(tableRow, email) {
 }
 
 function fillTable(persons) {
+    // TODO: tabindex to pills and tr, keyboard event handlers etc.
     const tableBody = document.querySelector(".persons-table tbody");
     // remove all children
     tableBody.replaceChildren();
     persons.forEach((p) => {
         const tr = document.createElement("tr");
         tr.dataset.pk = p.person.pk;
+
         const personEl = document.createElement("td");
-        personEl.textContent = concatTitleName(p.person.title, p.person.name);
+        const personText = concatTitleName(p.person.title, p.person.name);
+        const personPill = makePill(personText, p.person.pk);
+        personEl.appendChild(personPill);
         tr.appendChild(personEl);
 
         appendEmailCell(tr, p.person.email);

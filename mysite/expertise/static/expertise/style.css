@@ -5,3 +5,18 @@
 .persons-table > tbody > tr:hover > td {
     background-color: #9fc1f5;
 }
+
+/* values copied from select2 option elements */
+span.pill {
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    display: inline-block;
+    box-sizing: border-box;
+    /* nowrap is bad with some very long spans */
+    /* white-space: nowrap; */
+    margin-right: 5px;
+    padding-right: 5px;
+    padding-left: 5px;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+}
