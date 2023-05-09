@@ -1,0 +1,9 @@
+asgiref==3.6.0
+Django==4.2
+django-neomodel==0.1.0
+neo4j-driver==4.4.10
+neobolt==1.7.17
+neomodel==5.0.0
+pytz==2023.3
+six==1.16.0
+sqlparse==0.4.4
