@@ -1,7 +1,7 @@
 "use strict";
 
 function formatLabel(item) {
-    /**display optgroup name before the element for items of some optgroups */
+    // for displaying the optgroup name before the element for some groups
     const labels = {
         "Persons": "Person",
         "Advisors": "Advisor",
@@ -97,38 +97,39 @@ function updateAlert(length) {
     }
 }
 
-function drawG6Graph(data, containerId){
-    const nodes = [
-        { id: "1", label: "Max Muster" },
-        { id: "2", label: "Jana Schuster von Grafhausen die Dritte" },
-        { id: "3", label: "NLP" },
-        { id: "4", label: "TU Dresden" },
-        { id: "5", label: "Prof. Hagel" },
-    ];
+function drawG6Graph(data, containerId, containerWidth){
+    data.nodes = data.nodes.map((node) => {
+        node.label = node.properties.name;
+        delete node.properties;
+        return node;
+    });
+    // maybe copy values with delete Object.assign(..) instead
+    data.edges = data.relationships.map((rel) => {
+        rel.source = rel.startNode;
+        rel.target = rel.endNode;
+        switch (rel.type) {
+            case "ADVISED_BY":
+                rel.label = "ADVISED BY";
+                break;
+            case "MEMBER_OF":
+                rel.label = "MEMBER OF";
+                break;
+            default:
+                rel.label = rel.type;
+                break;
+        }
+        return rel;
+    });
+    delete data.relationships;
 
-    const edges = [
-        { source: "1", target: "3", label: "WANTS" },
-        { source: "2", target: "3", label: "OFFERS" },
-        { source: "1", target: "2", label: "ADVISED_BY" },
-        { source: "2", target: "4", label: "MEMBER_OF" },
-        { source: "5", target: "4", label: "MEMBER_OF" },
-    ];
-
-    // TODO remove
-    data = {
-        nodes: nodes,
-        edges: edges,
-    };
-
+    // TODO: cluster?
     const graph = new G6.Graph({
         container: containerId,
-        width: 2000,
+        width: containerWidth,
         height: 800,
         defaultNode: {
             type: "ellipse",
-            color: "#5B8FF9",
             style: {
-                fill: "#9EC9FF",
                 lineWidth: 1,
             },
         },
@@ -139,25 +140,26 @@ function drawG6Graph(data, containerId){
                 endArrow: true,
             },
         },
-        renderer: "svg",
+        renderer: "canvas",
         layout: {
             type: "force2",
             animate: false,
             maxSpeed: 100,
             linkDistance: 300,
-            //preventOverlap: true,
+            preventOverlap: true,
         },
         modes: {
             // TODO: make highlight only on click?
             default: ["drag-canvas", "zoom-canvas", "activate-relations", "drag-node"],
         },
+        fitView: true,
     });
 
     graph.data(data);
     graph.render();
 
-    // the resizing for long labels is called in this event or otherwise
-    // it won't work with SVG (likely because it isn't drawn right after function call)
+    // the resizing for long labels is called in this event, otherwise it won't
+    // work with SVG (likely because it isn't drawn instantly)
     graph.on("afterrender", () => {
         graph.getNodes().forEach((node) => {
             // find the text shape by its name
@@ -174,10 +176,13 @@ function drawG6Graph(data, containerId){
 function showGraph(data) {
     const containerId = "graph-container";
     const container = document.querySelector("#" + containerId);
-    drawG6Graph(data, containerId);
+    const containerWidth = 1600;
+    container.style.width = containerWidth + "px";
+    drawG6Graph(data, containerId, containerWidth);
 
     container.classList.remove("d-none");
-    const networkEl = document.querySelector("#" + containerId + " > svg");
+    // select the svg or canvas element
+    const networkEl = document.querySelector("#" + containerId + " > *");
     networkEl.classList.add("border", "border-info");
     container.scrollIntoView();
 }
@@ -186,7 +191,7 @@ async function getGraph(personId) {
     // what happens in case of timeout?
     const url = "graph";
     try {
-        const response = await fetch(`${url}?personId=${encodeURIComponent(personId)}`);
+        const response = await fetch(`${url}?person=${encodeURIComponent(personId)}`);
         if (!response.ok) {
             throw new Error("Network response was not OK");
         }
@@ -202,16 +207,14 @@ function makeGraph(e) {
         return;
     }
 
-    const personId = e.currentTarget.dataset.id;
+    const personId = e.currentTarget.dataset.pk;
     console.log("getting graph data...");
     getGraph(personId).then((data) => {
         if (data === undefined) {
             console.log("... graph request returned undefined");
             return;
         }
-        const graphData = data.graph;
-        console.log(graphData);
-        showGraph(graphData);
+        showGraph(data.graph);
     });
 }
 

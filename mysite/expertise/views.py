@@ -1,9 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseBadRequest
-from neomodel import Q, db
-from neo4j import GraphDatabase
-import os
-import requests
+from neomodel import Q, DoesNotExist
 
 from expertise.models import (
     Person,
@@ -125,72 +122,62 @@ def get_filtered_persons(search_param: str) -> list[dict]:
 
     return get_all_person_values(matching_persons)
 
-def get_all_close_relations(tx, person_id):
-    records = []
-    result = tx.run("MATCH (p:Person {pk:$pk})-[r*1..2]-(n)"
-                    "RETURN p, r, n", pk=person_id)
+def format_nodes_for_graph(nodes):
+    # the primary keys instead of node ids are used because it's
+    # needed for frontend functionality
+    return [{"id": node.get("pk"),
+            "properties": {
+                "name": node.get("name"),
+                # TODO: maybe also add persons' titles
+            },
+            "labels": list(node.labels)}
+            for node in nodes]
 
-    for record in result:
-        records.append(record["r"])
-    return records
+def format_rels_for_graph(rels):
+    return [{"startNode": rel.nodes[0].get("pk"),
+            "endNode": rel.nodes[1].get("pk"),
+            "type": rel.type}
+            for rel in rels]
 
-def get_graph_data(person_id: str):
-    # TODO: return error for person doesn't exist
+def get_graph_data(person: Person):
+    nodes, rels = person.all_connected()
+    graph_data = {}
+    graph_data["nodes"] = format_nodes_for_graph(nodes)
+    # append the person that the graph is for
+    person_data = {
+        "id": person.pk,
+        "properties": {
+            "name": person.name
+        },
+        "labels": ["Person"],
+    }
+    graph_data["nodes"].append(person_data)
+    graph_data["relationships"] = format_rels_for_graph(rels)
+    return graph_data
 
-    # TODO: improve this weird splitting
-    full_url = os.environ['NEO4J_BOLT_URL']
-    url = full_url[0:7] + full_url[-14:]
-    user = "neo4j"
-    password = full_url.split("neo4j:")[1][:-15]
-    # print(url)
-    # print(user)
-    # print(password)
-
-    with GraphDatabase.driver(url, auth=(user, password), database="expertise") as driver:
-        with driver.session() as session:
-            graph = session.read_transaction(get_all_close_relations, person_id)
-            #for record in graph:
-             #   print(record)
-
-def get_nav_active_data() -> dict:
+def get_nav_active_marker() -> dict:
     # maybe this should be a constant variable somewhere instead?
     return {
         "class": "active",
         "aria": "aria-current=page",
     }
 
-def test():
-    # m = Person(name='Moritz').save()
-    # s = Person(name='Siavash').save()
-    # r = m.advisors.connect(s)
-    # ResearchInterest(name='AI').save()
-    # ResearchInterest(name='AI').save()
-    # Role(name='Programmer').save()
-    # Expertise(name='python').save()
-    # Institute(name='TUD').save()
-    # Faculty(name='ZIH').save()
-    # Department(name='CompSci').save()
-
-    # for p in Person.nodes.all():
-    #    print(p)
-    pass
-
-# VIEWS
+# VIEWS BELOW
 
 def index(request):
     context = {
         "suggestions": get_suggestions(),
-        "nav_home": get_nav_active_data(),
+        "nav_home": get_nav_active_marker(),
     }
-    return render(request, 'expertise/index.html', context)
+    return render(request, "expertise/index.html", context)
 
 def edit(request):
     context = {
-        "nav_edit": get_nav_active_data(),
+        "nav_edit": get_nav_active_marker(),
     }
-    return render(request, 'expertise/edit.html', context)
+    return render(request, "expertise/edit.html", context)
 
-def persons(request):
+def persons_api(request):
     data = {}
     if "search" not in request.GET:
         data["error"] = "missing parameter: search"
@@ -201,15 +188,20 @@ def persons(request):
     data["persons"] = persons_data
     return JsonResponse(data)
 
-def graph(request):
+def graph_api(request):
     data = {}
     person_id = request.GET.get("person")
-    if person_id == None or person_id == "":
+    if person_id in (None, ""):
         # maybe different errors for missing parameter and missing value
         data["error"] = "missing parameter: person"
         return JsonResponse(data)
 
-    person_id = request.GET.get("person")
-    graph_data = get_graph_data(person_id)
+    try:
+        person_node = Person.nodes.get(pk=person_id)
+    except DoesNotExist:
+        data["error"] = "person does not exist"
+        return JsonResponse(data)
+
+    graph_data = get_graph_data(person_node)
     data["graph"] = graph_data
     return JsonResponse(data)
