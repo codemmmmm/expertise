@@ -1,6 +1,19 @@
 "use strict";
 
-function formatLabel(item) {
+function templateResult(item, container) {
+    // if I wanted to color the search results, the color of the
+    // exclude/highlight states would need to be handled too
+    if (item.element) {
+        // currently I only use the class for coloring the optgroup
+        // so maybe I should only add the class to the optgroups?
+        $(container).addClass($(item.element).attr("class"));
+    }
+    return item.text;
+}
+
+function templateSelection(item, container) {
+    $(container).addClass($(item.element).attr("class"));
+
     // for displaying the optgroup name before the element for some groups
     const labels = {
         "Persons": "Person",
@@ -8,7 +21,6 @@ function formatLabel(item) {
         "Offered expertise": "Offered",
         "Wanted expertise": "Wanted",
     };
-
     const option = $(item.element);
     const optgroup = option.closest("optgroup").attr("label");
     const label = labels[optgroup];
@@ -18,12 +30,12 @@ function formatLabel(item) {
 function createTag(params) {
     const selections = $(".search-filter").select2("data");
     const searchSelection = selections.find((element) => element.newTag === true);
-    // don't allow more than one tag (= search word)
+    // allow only one tag (= search word)
     if (searchSelection) {
         return null;
     }
 
-    var term = $.trim(params.term);
+    const term = $.trim(params.term);
     if (term === "") {
         return null;
     }
@@ -97,14 +109,15 @@ function updateAlert(length) {
     }
 }
 
-function drawG6Graph(data, containerId, containerWidth){
-    data.nodes = data.nodes.map((node) => {
+function convertToGraphData(apiData) {
+    apiData.nodes = apiData.nodes.map((node) => {
         node.label = node.properties.name;
         delete node.properties;
         return node;
     });
+
     // maybe copy values with delete Object.assign(..) instead
-    data.edges = data.relationships.map((rel) => {
+    apiData.edges = apiData.relationships.map((rel) => {
         rel.source = rel.startNode;
         rel.target = rel.endNode;
         switch (rel.type) {
@@ -120,7 +133,62 @@ function drawG6Graph(data, containerId, containerWidth){
         }
         return rel;
     });
-    delete data.relationships;
+    delete apiData.relationships;
+    return apiData;
+}
+
+function getColors() {
+    const rootStyle = getComputedStyle(document.documentElement);
+    const colors = {
+        person: rootStyle.getPropertyValue("--color-person"),
+        interest: rootStyle.getPropertyValue("--color-interest"),
+        institute: rootStyle.getPropertyValue("--color-institute"),
+        faculty: rootStyle.getPropertyValue("--color-faculty"),
+        department: rootStyle.getPropertyValue("--color-department"),
+        role: rootStyle.getPropertyValue("--color-role"),
+        expertise: rootStyle.getPropertyValue("--color-expertise"),
+    };
+    return colors;
+}
+
+function drawG6Graph(apiData, personId, containerId, containerWidth){
+    const data = convertToGraphData(apiData);
+    const colors = getColors();
+    data.nodes.forEach((node) => {
+        node.style = {};
+        switch (node.labels[0]) {
+            case "Person":
+                node.style.fill = colors.person;
+                break;
+            case "ResearchInterest":
+                node.style.fill = colors.interest;
+                break;
+            case "Institute":
+                node.style.fill = colors.institute;
+                break;
+            case "Faculty":
+                node.style.fill = colors.faculty;
+                break;
+            case "Department":
+                node.style.fill = colors.department;
+                break;
+            case "Role":
+                node.style.fill = colors.role;
+                break;
+            case "Expertise":
+                node.style.fill = colors.expertise;
+                break;
+        }
+    });
+    // highlight the node that the graph is about
+    const sourceNode = data.nodes.find((node) => node.id === personId);
+    sourceNode.style = {
+        ...sourceNode.style,
+        lineWidth: 3,
+        stroke: "#000000",
+        shadowColor: "#555555",
+        shadowBlur: 3,
+    };
 
     // TODO: cluster?
     const graph = new G6.Graph({
@@ -130,14 +198,23 @@ function drawG6Graph(data, containerId, containerWidth){
         defaultNode: {
             type: "ellipse",
             style: {
+                fill: "#ffffff",
                 lineWidth: 1,
+                stroke: "#a5abb6",
+                cursor: "grab",
             },
         },
         defaultEdge: {
             style: {
-                stroke: "#7fb0f1",
+                stroke: "#a5abb6",
                 // TODO: fill arrow or make more obvious in other ways
                 endArrow: true,
+            },
+            labelCfg: {
+                style: {
+                    opacity: 0.7,
+                    fill: "#111111",
+                },
             },
         },
         renderer: "canvas",
@@ -146,7 +223,6 @@ function drawG6Graph(data, containerId, containerWidth){
             animate: false,
             maxSpeed: 100,
             linkDistance: 300,
-            preventOverlap: true,
         },
         modes: {
             // TODO: make highlight only on click?
@@ -164,6 +240,11 @@ function drawG6Graph(data, containerId, containerWidth){
         graph.getNodes().forEach((node) => {
             // find the text shape by its name
             const labelShape = node.getContainer().find((e) => e.get("name") === "text-shape");
+            // a node with no text/label would cause a layout error, according to
+            // the library but I'm not sure if that is actually happening
+            if (labelShape === null) {
+                return;
+            }
             // get the bounding box of the label
             const labelBBox = labelShape.getBBox();
             graph.updateItem(node, {
@@ -173,12 +254,13 @@ function drawG6Graph(data, containerId, containerWidth){
     });
 }
 
-function showGraph(data) {
+function showGraph(data, personId) {
     const containerId = "graph-container";
     const container = document.querySelector("#" + containerId);
     const containerWidth = 1600;
     container.style.width = containerWidth + "px";
-    drawG6Graph(data, containerId, containerWidth);
+    container.replaceChildren();
+    drawG6Graph(data, personId, containerId, containerWidth);
 
     container.classList.remove("d-none");
     // select the svg or canvas element
@@ -208,13 +290,12 @@ function makeGraph(e) {
     }
 
     const personId = e.currentTarget.dataset.pk;
-    console.log("getting graph data...");
     getGraph(personId).then((data) => {
         if (data === undefined) {
             console.log("... graph request returned undefined");
             return;
         }
-        showGraph(data.graph);
+        showGraph(data.graph, personId);
     });
 }
 
@@ -358,7 +439,8 @@ $(".search-filter").select2({
     tags: true,
     tokenSeparators: [","],
     allowClear: true,
-    templateSelection: formatLabel,
+    templateSelection: templateSelection,
+    templateResult: templateResult,
     createTag: createTag,
     debug: true,
     width: "100%",
@@ -367,6 +449,14 @@ $(".search-filter").select2({
 $(".search-filter").on("change", function () {
     const persons = JSON.parse(sessionStorage.getItem("persons")) ?? [];
     fillTable(filter_persons(persons));
+});
+
+// prevents opening the dropdown after unselecting an item
+$(".search-filter").on("select2:unselecting", function () {
+    $(this).on("select2:opening", function (ev) {
+        ev.preventDefault();
+        $(this).off("select2:opening");
+    });
 });
 
 const searchEl = document.querySelector("#search-button");

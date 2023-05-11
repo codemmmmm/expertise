@@ -1,5 +1,62 @@
-.persons-table > tbody > tr:hover > td {
-    background-color: #9fc1f5;
+:root {
+    --color-person: #59cfec;
+    --color-interest: #ebf531;
+    --color-institute: #ed8cde;
+    --color-faculty: #aabbcc; /* or maybe #bfbfbf */
+    --color-department: #d1c08a;
+    --color-role: #f78e4c;
+    --color-expertise: #23b660;
+}
+
+th.person,
+td:nth-child(1)>span,
+td:nth-child(7)>span,
+.select2-container ul.select2-selection__rendered>li.person,
+strong.select2-results__group.person {
+    background-color: var(--color-person);
+}
+
+th.interest,
+td:nth-child(3)>span,
+.select2-container ul.select2-selection__rendered>li.interest,
+strong.select2-results__group.interest {
+    background-color: var(--color-interest);
+}
+
+th.institute,
+td:nth-child(4)>span,
+.select2-container ul.select2-selection__rendered>li.institute,
+strong.select2-results__group.institute {
+    background-color: var(--color-institute);
+}
+
+th.faculty,
+td:nth-child(5)>span,
+.select2-container ul.select2-selection__rendered>li.faculty,
+strong.select2-results__group.faculty {
+    background-color: var(--color-faculty);
+}
+
+th.department,
+td:nth-child(6)>span,
+.select2-container ul.select2-selection__rendered>li.department,
+strong.select2-results__group.department {
+    background-color: var(--color-department);
+}
+
+th.role,
+td:nth-child(8)>span,
+.select2-container ul.select2-selection__rendered>li.role,
+strong.select2-results__group.role {
+    background-color: var(--color-role);
+}
+
+th.expertise,
+td:nth-child(9)>span,
+td:nth-child(10)>span,
+.select2-container ul.select2-selection__rendered>li.expertise,
+strong.select2-results__group.expertise {
+    background-color: var(--color-expertise);
 }
 
 /* values copied from select2 option elements */

@@ -16,9 +16,9 @@
         </h3>
         <select class="form-select search-filter" multiple="multiple" name="filters[]">
             {% for key, item in suggestions.items %}
-            <optgroup label="{{ item.group }}">
+            <optgroup class="{{ item.class }}" label="{{ item.group }}">
                 {% for suggestion in item.options %}
-                <option value="{{ key|slice:":4" }}-{{ suggestion.pk }}">{{ suggestion.name }}</option>
+                <option class="{{ item.class }}" value="{{ key|slice:":4" }}-{{ suggestion.pk }}">{{ suggestion.name }}</option>
                 {% endfor %}
             </optgroup>
             {% endfor %}
@@ -34,19 +34,19 @@
 </div>
 
 <div class="table-responsive">
-    <table class="persons-table table">
-        <thead class="table-primary">
+    <table class="persons-table table table-hover table-sm">
+        <thead>
             <tr>
-                <th scope="col">Name</th>
+                <th scope="col" class="person">Name</th>
                 <th scope="col">Email</th>
-                <th scope="col">Research interest</th>
-                <th scope="col">Institute</th>
-                <th scope="col">Faculty</th>
-                <th scope="col">Department</th>
-                <th scope="col">Advisor</th>
-                <th scope="col">Role in ScaDS.AI</th>
-                <th scope="col">Offered expertise</th>
-                <th scope="col">Wanted expertise</th>
+                <th scope="col" class="interest">Research interest</th>
+                <th scope="col" class="institute">Institute</th>
+                <th scope="col" class="faculty">Faculty</th>
+                <th scope="col" class="department">Department</th>
+                <th scope="col" class="person">Advisor</th>
+                <th scope="col" class="role">Role in ScaDS.AI</th>
+                <th scope="col" class="expertise">Offered expertise</th>
+                <th scope="col" class="expertise">Wanted expertise</th>
             </tr>
         </thead>
         <tbody>
