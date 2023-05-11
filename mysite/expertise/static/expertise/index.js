@@ -344,14 +344,36 @@ function appendBasicTableCell(tableRow, values) {
     tableRow.appendChild(td);
 }
 
+/**
+ * emulate button behavior for elements that can't be a button, e.g. tr.
+ * might not work for buttons in forms
+ * @param {HTMLElement} element
+ * @param {Function} func the function that will be executed on click or keydown
+ */
+function emulateButton(element, func) {
+    element.setAttribute("role", "button");
+    element.setAttribute("tabindex", "0");
+    element.addEventListener("click", func);
+    element.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            // prevent scrolling from spacebar input
+            e.preventDefault();
+            element.click();
+        }
+        console.log(e.key);
+    });
+}
+
 function appendEmailCell(tableRow, email) {
-    // TODO: if email empty, don't create a link
     const emailEl = document.createElement("td");
+    tableRow.appendChild(emailEl);
+    if (!email) {
+        return;
+    }
     const emailLink = document.createElement("a");
     emailLink.href = "mailto:" + email;
     emailLink.textContent = email;
     emailEl.appendChild(emailLink);
-    tableRow.appendChild(emailEl);
 }
 
 function fillTable(persons) {
@@ -380,8 +402,7 @@ function fillTable(persons) {
         appendBasicTableCell(tr, p.offered);
         appendBasicTableCell(tr, p.wanted);
 
-        tr.addEventListener("click", makeGraph);
-        tr.setAttribute("role", "button");
+        emulateButton(tr, makeGraph);
         tableBody.appendChild(tr);
     });
 }
