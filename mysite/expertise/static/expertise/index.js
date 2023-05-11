@@ -1,52 +1,5 @@
 "use strict";
 
-function templateResult(item, container) {
-    // if I wanted to color the search results, the color of the
-    // exclude/highlight states would need to be handled too
-    if (item.element) {
-        // currently I only use the class for coloring the optgroup
-        // so maybe I should only add the class to the optgroups?
-        $(container).addClass($(item.element).attr("class"));
-    }
-    return item.text;
-}
-
-function templateSelection(item, container) {
-    $(container).addClass($(item.element).attr("class"));
-
-    // for displaying the optgroup name before the element for some groups
-    const labels = {
-        "Persons": "Person",
-        "Advisors": "Advisor",
-        "Offered expertise": "Offered",
-        "Wanted expertise": "Wanted",
-    };
-    const option = $(item.element);
-    const optgroup = option.closest("optgroup").attr("label");
-    const label = labels[optgroup];
-    return label ? label + " | " + item.text : item.text;
-}
-
-function createTag(params) {
-    const selections = $(".search-filter").select2("data");
-    const searchSelection = selections.find((element) => element.newTag === true);
-    // allow only one tag (= search word)
-    if (searchSelection) {
-        return null;
-    }
-
-    const term = $.trim(params.term);
-    if (term === "") {
-        return null;
-    }
-
-    return {
-        id: term,
-        text: term,
-        newTag: true,
-    };
-}
-
 function showLoading(button) {
     button.innerHTML = "<span class=\"spinner-border spinner-border-sm me-1\" role=\"status\" aria-hidden=\"true\"></span>Searching...";
 }
@@ -431,6 +384,53 @@ function fillTable(persons) {
         tr.setAttribute("role", "button");
         tableBody.appendChild(tr);
     });
+}
+
+function templateResult(item, container) {
+    // if I wanted to color the search results, the color of the
+    // exclude/highlight states would need to be handled too
+    if (item.element) {
+        // currently I only use the class for coloring the optgroup
+        // so maybe I should only add the class to the optgroups?
+        $(container).addClass($(item.element).attr("class"));
+    }
+    return item.text;
+}
+
+function templateSelection(item, container) {
+    $(container).addClass($(item.element).attr("class"));
+
+    // for displaying the optgroup name before the element for some groups
+    const labels = {
+        "Persons": "Person",
+        "Advisors": "Advisor",
+        "Offered expertise": "Offered",
+        "Wanted expertise": "Wanted",
+    };
+    const option = $(item.element);
+    const optgroup = option.closest("optgroup").attr("label");
+    const label = labels[optgroup];
+    return label ? label + " | " + item.text : item.text;
+}
+
+function createTag(params) {
+    const selections = $(".search-filter").select2("data");
+    const searchSelection = selections.find((element) => element.newTag === true);
+    // allow only one tag (= search word)
+    if (searchSelection) {
+        return null;
+    }
+
+    const term = $.trim(params.term);
+    if (term === "") {
+        return null;
+    }
+
+    return {
+        id: term,
+        text: term,
+        newTag: true,
+    };
 }
 
 $(".search-filter").select2({
