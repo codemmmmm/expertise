@@ -2,10 +2,18 @@
     --color-person: #59cfec;
     --color-interest: #ebf531;
     --color-institute: #ed8cde;
-    --color-faculty: #aabbcc; /* or maybe #bfbfbf */
+    --color-faculty: #abc; /* or maybe #bfbfbf */
     --color-department: #d1c08a;
     --color-role: #f78e4c;
     --color-expertise: #23b660;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.nav-link.active {
+    font-weight: 600;
 }
 
 div.table-responsive.persons-table-container {
