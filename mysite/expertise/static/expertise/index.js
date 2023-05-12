@@ -104,6 +104,14 @@ function getColors() {
     return colors;
 }
 
+/**
+ *
+ * @param {*} apiData
+ * @param {*} personId
+ * @param {*} containerId
+ * @param {*} containerWidth
+ * @returns {string} name of the person that the graph is about
+ */
 function drawG6Graph(apiData, personId, containerId, containerWidth){
     const data = convertToGraphData(apiData);
     const colors = getColors();
@@ -205,6 +213,7 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
             });
         });
     });
+    return sourceNode.label;
 }
 
 function showGraph(data, personId) {
@@ -213,12 +222,13 @@ function showGraph(data, personId) {
     const containerWidth = 1600;
     container.style.width = containerWidth + "px";
     container.replaceChildren();
-    drawG6Graph(data, personId, containerId, containerWidth);
+    const personName = drawG6Graph(data, personId, containerId, containerWidth);
 
     container.classList.remove("d-none");
     // select the svg or canvas element
     const networkEl = document.querySelector("#" + containerId + " > *");
     networkEl.classList.add("border", "border-info");
+    networkEl.setAttribute("alt", "Network graph about " + personName);
     container.scrollIntoView();
 }
 

@@ -74,3 +74,7 @@ button.pill {
     margin-bottom: 3px;
     text-align: left;
 }
+
+button.pill:active {
+    box-shadow: inset 1px 1px 4px #555555;
+}
