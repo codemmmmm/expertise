@@ -237,7 +237,7 @@ async function getGraph(personId) {
 }
 
 function makeGraph(e) {
-    // clicking the email link won't cause the graph to be drawn
+    // don't execute the callback when the email link is clicked
     if (e.target.nodeName === "A") {
         return;
     }
@@ -327,21 +327,36 @@ function concatTitleName(title, name) {
     return title === "" ? name : title + " " + name;
 }
 
-function makePill(text, id) {
-    const pill = document.createElement("span");
-    pill.classList.add("pill");
-    pill.textContent = text;
-    // TODO: add category to id?
-    pill.dataset.pk = id;
-    return pill;
+/**
+ * adds the id or removes it if it's already selected
+ * @param {string} id
+ */
+function toggleSelection(id) {
+    const $searchFilter = $(".search-filter");
+    const values = $searchFilter.val();
+    const index = values.indexOf(id);
+    if (index === -1) {
+        $searchFilter.val([id, ...values]);
+    } else {
+        // remove the element in-place
+        values.splice(index, 1);
+        $searchFilter.val(values);
+    }
+    $searchFilter.trigger("change");
 }
 
-function appendBasicTableCell(tableRow, values) {
-    const td = document.createElement("td");
-    values.forEach((value) => {
-        td.appendChild(makePill(value.name, value.pk));
-    });
-    tableRow.appendChild(td);
+function pillClick(e) {
+    e.stopPropagation();
+    toggleSelection(e.target.dataset.pk);
+}
+
+function makePill(text, id) {
+    const pill = document.createElement("button");
+    pill.classList.add("pill");
+    pill.textContent = text;
+    pill.dataset.pk = id;
+    pill.addEventListener("click", pillClick);
+    return pill;
 }
 
 /**
@@ -360,8 +375,17 @@ function emulateButton(element, func) {
             e.preventDefault();
             element.click();
         }
-        console.log(e.key);
     });
+}
+
+function appendBasicTableCell(tableRow, values, pkPrefix) {
+    const td = document.createElement("td");
+    values.forEach((value) => {
+        // the prefix is needed for select2
+        const pk = pkPrefix + "-" + value.pk;
+        td.appendChild(makePill(value.name, pk));
+    });
+    tableRow.appendChild(td);
 }
 
 function appendEmailCell(tableRow, email) {
@@ -387,20 +411,20 @@ function fillTable(persons) {
 
         const personEl = document.createElement("td");
         const personText = concatTitleName(p.person.title, p.person.name);
-        const personPill = makePill(personText, p.person.pk);
+        const personPill = makePill(personText, "pers-" + p.person.pk);
         personEl.appendChild(personPill);
         tr.appendChild(personEl);
 
         appendEmailCell(tr, p.person.email);
-        appendBasicTableCell(tr, p.interests);
-        appendBasicTableCell(tr, p.institutes);
-        appendBasicTableCell(tr, p.faculties);
-        appendBasicTableCell(tr, p.departments);
+        appendBasicTableCell(tr, p.interests, "inte");
+        appendBasicTableCell(tr, p.institutes, "inst");
+        appendBasicTableCell(tr, p.faculties, "facu");
+        appendBasicTableCell(tr, p.departments, "depa");
         // should advisor titles be shown?
-        appendBasicTableCell(tr, p.advisors);
-        appendBasicTableCell(tr, p.roles);
-        appendBasicTableCell(tr, p.offered);
-        appendBasicTableCell(tr, p.wanted);
+        appendBasicTableCell(tr, p.advisors, "advi");
+        appendBasicTableCell(tr, p.roles, "role");
+        appendBasicTableCell(tr, p.offered, "offe");
+        appendBasicTableCell(tr, p.wanted, "want");
 
         emulateButton(tr, makeGraph);
         tableBody.appendChild(tr);
@@ -454,32 +478,33 @@ function createTag(params) {
     };
 }
 
-$(".search-filter").select2({
-    placeholder: "Select filters or enter new value for searching",
-    maximumSelectionLength: 20,
-    tags: true,
-    tokenSeparators: [","],
-    allowClear: true,
-    templateSelection: templateSelection,
-    templateResult: templateResult,
-    createTag: createTag,
-    debug: true,
-    width: "100%",
-});
-
-$(".search-filter").on("change", function () {
-    const persons = JSON.parse(sessionStorage.getItem("persons")) ?? [];
-    fillTable(filter_persons(persons));
-});
-
-// prevents opening the dropdown after unselecting an item
-$(".search-filter").on("select2:unselecting", function () {
-    $(this).on("select2:opening", function (ev) {
-        ev.preventDefault();
-        $(this).off("select2:opening");
+function initializeSelect2() {
+    const $searchFilter = $(".search-filter").select2({
+        placeholder: "Select filters or enter new value for searching",
+        maximumSelectionLength: 20,
+        tags: true,
+        tokenSeparators: [","],
+        allowClear: true,
+        templateSelection: templateSelection,
+        templateResult: templateResult,
+        createTag: createTag,
+        debug: true,
+        width: "100%",
     });
-});
+    $searchFilter.on("change", function () {
+        const persons = JSON.parse(sessionStorage.getItem("persons")) ?? [];
+        fillTable(filter_persons(persons));
+    });
+    // prevents opening the dropdown after unselecting an item
+    $searchFilter.on("select2:unselecting", function () {
+        $(this).on("select2:opening", function (ev) {
+            ev.preventDefault();
+            $(this).off("select2:opening");
+        });
+    });
+}
 
+initializeSelect2();
 const searchEl = document.querySelector("#search-button");
 searchEl.addEventListener("click", search);
 

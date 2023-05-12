@@ -17,6 +17,11 @@
         <select class="form-select search-filter" multiple="multiple" name="filters[]">
             {% for key, item in suggestions.items %}
             <optgroup class="{{ item.class }}" label="{{ item.group }}">
+                {% comment %}
+                    the pk is prefixed so select2 can distinguish between
+                    e.g. offered and wanted expertise which can be the same node
+                    in the database
+                {% endcomment %}
                 {% for suggestion in item.options %}
                 <option class="{{ item.class }}" value="{{ key|slice:":4" }}-{{ suggestion.pk }}">{{ suggestion.name }}</option>
                 {% endfor %}
@@ -28,7 +33,7 @@
 </form>
 
 <div class="container-fluid mt-3">
-    <div class="alert search-alert d-none" role="alert">
+    <div class="alert search-alert py-2 d-none" role="alert">
         alert text placeholder that you shouldn't see :&#41
     </div>
 </div>

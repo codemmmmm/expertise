@@ -9,67 +9,68 @@
 }
 
 th.person,
-td:nth-child(1)>span,
-td:nth-child(7)>span,
+td:nth-child(1)>button,
+td:nth-child(7)>button,
 .select2-container ul.select2-selection__rendered>li.person,
 strong.select2-results__group.person {
     background-color: var(--color-person);
 }
 
 th.interest,
-td:nth-child(3)>span,
+td:nth-child(3)>button,
 .select2-container ul.select2-selection__rendered>li.interest,
 strong.select2-results__group.interest {
     background-color: var(--color-interest);
 }
 
 th.institute,
-td:nth-child(4)>span,
+td:nth-child(4)>button,
 .select2-container ul.select2-selection__rendered>li.institute,
 strong.select2-results__group.institute {
     background-color: var(--color-institute);
 }
 
 th.faculty,
-td:nth-child(5)>span,
+td:nth-child(5)>button,
 .select2-container ul.select2-selection__rendered>li.faculty,
 strong.select2-results__group.faculty {
     background-color: var(--color-faculty);
 }
 
 th.department,
-td:nth-child(6)>span,
+td:nth-child(6)>button,
 .select2-container ul.select2-selection__rendered>li.department,
 strong.select2-results__group.department {
     background-color: var(--color-department);
 }
 
 th.role,
-td:nth-child(8)>span,
+td:nth-child(8)>button,
 .select2-container ul.select2-selection__rendered>li.role,
 strong.select2-results__group.role {
     background-color: var(--color-role);
 }
 
 th.expertise,
-td:nth-child(9)>span,
-td:nth-child(10)>span,
+td:nth-child(9)>button,
+td:nth-child(10)>button,
 .select2-container ul.select2-selection__rendered>li.expertise,
 strong.select2-results__group.expertise {
     background-color: var(--color-expertise);
 }
 
 /* values copied from select2 option elements */
-span.pill {
+button.pill {
     border: 1px solid #aaa;
     border-radius: 4px;
     display: inline-block;
     box-sizing: border-box;
-    /* nowrap is bad with some very long spans */
+    /* nowrap is bad with some very long elements */
     /* white-space: nowrap; */
     margin-right: 5px;
     padding-right: 5px;
     padding-left: 5px;
     text-overflow: ellipsis;
     margin-bottom: 3px;
+    text-align: left;
 }
