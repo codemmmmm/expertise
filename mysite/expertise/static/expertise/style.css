@@ -8,7 +8,23 @@
     --color-expertise: #23b660;
 }
 
-th.person,
+div.table-responsive.persons-table-container {
+    overflow: auto;
+    max-height: 550px;
+}
+
+table.table.persons-table th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* because real borders don't work with the sticky header
+/* but this hack doesn't work in chromium... */
+/* table.table.persons-table th {
+    box-shadow: inset 0px 0px #000, 0 2px #000;
+} */
+
 td:nth-child(1)>button,
 td:nth-child(7)>button,
 .select2-container ul.select2-selection__rendered>li.person,
@@ -16,42 +32,36 @@ strong.select2-results__group.person {
     background-color: var(--color-person);
 }
 
-th.interest,
 td:nth-child(3)>button,
 .select2-container ul.select2-selection__rendered>li.interest,
 strong.select2-results__group.interest {
     background-color: var(--color-interest);
 }
 
-th.institute,
 td:nth-child(4)>button,
 .select2-container ul.select2-selection__rendered>li.institute,
 strong.select2-results__group.institute {
     background-color: var(--color-institute);
 }
 
-th.faculty,
 td:nth-child(5)>button,
 .select2-container ul.select2-selection__rendered>li.faculty,
 strong.select2-results__group.faculty {
     background-color: var(--color-faculty);
 }
 
-th.department,
 td:nth-child(6)>button,
 .select2-container ul.select2-selection__rendered>li.department,
 strong.select2-results__group.department {
     background-color: var(--color-department);
 }
 
-th.role,
 td:nth-child(8)>button,
 .select2-container ul.select2-selection__rendered>li.role,
 strong.select2-results__group.role {
     background-color: var(--color-role);
 }
 
-th.expertise,
 td:nth-child(9)>button,
 td:nth-child(10)>button,
 .select2-container ul.select2-selection__rendered>li.expertise,
