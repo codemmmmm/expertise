@@ -15,7 +15,7 @@
             <h3>
                 <label for="search-filter" class="form-label">Search and filter</label>
             </h3>
-            <select class="form-select search-filter" multiple="multiple" name="filters[]">
+            <select class="form-select search-filter" multiple="multiple" name="filters[]" autofocus>
                 {% for key, item in suggestions.items %}
                 <optgroup class="{{ item.class }}" label="{{ item.group }}">
                     {% comment %}
@@ -61,6 +61,21 @@
     </table>
 </div>
 
-<div id="graph-container" class="mx-auto mb-3 d-none"></div>
+<div class="modal fade" id="graphModal" tabindex="-1" aria-labelledby="graphModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="graphModalLabel">Network graph</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body d-flex flex-wrap justify-content-center">
+                <div class="spinner-border text-primary graph-spinner" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div id="graph-container" class=""></div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

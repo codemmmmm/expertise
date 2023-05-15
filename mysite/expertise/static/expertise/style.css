@@ -22,6 +22,7 @@ form.home {
 
 div.table-responsive.persons-table-container {
     overflow: auto;
+    /* maybe min(...) would be better */
     max-height: 550px;
 }
 
@@ -106,4 +107,10 @@ button.pill {
 
 button.pill:active {
     box-shadow: inset 1px 1px 4px #555555;
+}
+
+#graphModal > .modal-dialog {
+    width: 1630px;
+    /* override the max-width from modal media queries */
+    max-width: none;
 }

@@ -1,10 +1,10 @@
 "use strict";
 
-function showLoading(button) {
+function showSearchLoading(button) {
     button.innerHTML = "<span class=\"spinner-border spinner-border-sm me-1\" role=\"status\" aria-hidden=\"true\"></span>Searching...";
 }
 
-function hideLoading(button) {
+function hideSearchLoading(button) {
     button.textContent = "Search";
 }
 
@@ -23,7 +23,7 @@ async function getPersons(searchWord) {
 
 function search(e) {
     e.preventDefault();
-    showLoading(e.target);
+    showSearchLoading(e.target);
     // get search parameter
     const selections = $(".search-filter").select2("data");
     const searchSelection = selections.find((element) => element.newTag === true);
@@ -35,13 +35,13 @@ function search(e) {
             // possibly using outdated search results
             sessionStorage.setItem("persons", JSON.stringify([]));
             updateAlert(null);
-            hideLoading(e.target);
+            hideSearchLoading(e.target);
             return;
         }
         const persons = data.persons;
         //console.log(persons);
         sessionStorage.setItem("persons", JSON.stringify(persons));
-        hideLoading(e.target);
+        hideSearchLoading(e.target);
         fillTable(filter_persons(persons));
         document.querySelector(".persons-table-container").classList.remove("d-none");
         updateAlert(persons.length);
@@ -222,15 +222,13 @@ function showGraph(data, personId) {
     const container = document.querySelector("#" + containerId);
     const containerWidth = 1600;
     container.style.width = containerWidth + "px";
-    container.replaceChildren();
     const personName = drawG6Graph(data, personId, containerId, containerWidth);
+    showModalContent();
 
-    container.classList.remove("d-none");
     // select the svg or canvas element
     const networkEl = document.querySelector("#" + containerId + " > *");
-    networkEl.classList.add("border", "border-info");
+    networkEl.classList.add("border", "border-info", "rounded", "rounded-1");
     networkEl.setAttribute("alt", "Network graph about " + personName);
-    container.scrollIntoView();
 }
 
 async function getGraph(personId) {
@@ -253,6 +251,7 @@ function makeGraph(e) {
         return;
     }
 
+    makeModal();
     const personId = e.currentTarget.dataset.pk;
     getGraph(personId).then((data) => {
         if (data === undefined) {
@@ -261,6 +260,22 @@ function makeGraph(e) {
         }
         showGraph(data.graph, personId);
     });
+}
+
+function makeModal() {
+    const modalEl = document.getElementById("graphModal");
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+    resetModalContent();
+}
+
+function showModalContent() {
+    document.querySelector(".graph-spinner").classList.add("d-none");
+}
+
+function resetModalContent() {
+    document.querySelector(".graph-spinner").classList.remove("d-none");
+    document.querySelector("#graph-container").replaceChildren();
 }
 
 function group_filters(filters, id) {
