@@ -43,6 +43,7 @@ function search(e) {
         sessionStorage.setItem("persons", JSON.stringify(persons));
         hideLoading(e.target);
         fillTable(filter_persons(persons));
+        document.querySelector(".persons-table-container").classList.remove("d-none");
         updateAlert(persons.length);
     });
 }
