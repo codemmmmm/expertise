@@ -490,7 +490,7 @@ function createTag(params) {
 
 function initializeSelect2() {
     const $searchFilter = $(".search-filter").select2({
-        placeholder: "Select filters or enter new value for searching",
+        placeholder: "Select filters or enter search parameter",
         maximumSelectionLength: 20,
         tags: true,
         tokenSeparators: [","],

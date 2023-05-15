@@ -16,6 +16,10 @@
     font-weight: 600;
 }
 
+form.home {
+    width: min(100%, 500px);
+}
+
 div.table-responsive.persons-table-container {
     overflow: auto;
     max-height: 550px;

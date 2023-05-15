@@ -8,34 +8,35 @@
 {% block title %}Expertise overview{% endblock %}
 
 {% block content %}
-<form class="container-fluid">
-    <div class="mb-3">
-        <!-- maybe give instructions for difference between filter and search -->
-        <h3>
-            <label for="search-filter" class="form-label">Search and filter</label>
-        </h3>
-        <select class="form-select search-filter" multiple="multiple" name="filters[]">
-            {% for key, item in suggestions.items %}
-            <optgroup class="{{ item.class }}" label="{{ item.group }}">
-                {% comment %}
-                    the pk is prefixed so select2 can distinguish between
-                    e.g. offered and wanted expertise which can be the same node
-                    in the database
-                {% endcomment %}
-                {% for suggestion in item.options %}
-                <option class="{{ item.class }}" value="{{ key|slice:":4" }}-{{ suggestion.pk }}">{{ suggestion.name }}</option>
+<div class="d-flex justify-content-center">
+    <form class="home">
+        <div class="mb-3">
+            <!-- maybe give instructions for difference between filter and search -->
+            <h3>
+                <label for="search-filter" class="form-label">Search and filter</label>
+            </h3>
+            <select class="form-select search-filter" multiple="multiple" name="filters[]">
+                {% for key, item in suggestions.items %}
+                <optgroup class="{{ item.class }}" label="{{ item.group }}">
+                    {% comment %}
+                        the pk is prefixed so select2 can distinguish between
+                        e.g. offered and wanted expertise which can be the same node
+                        in the database
+                    {% endcomment %}
+                    {% for suggestion in item.options %}
+                    <option class="{{ item.class }}" value="{{ key|slice:":4" }}-{{ suggestion.pk }}">{{ suggestion.name }}</option>
+                    {% endfor %}
+                </optgroup>
                 {% endfor %}
-            </optgroup>
-            {% endfor %}
-        </select>
-    </div>
-    <button type="submit" id="search-button" class="btn btn-primary">Search</button>
-</form>
-
-<div class="container-fluid mt-3">
-    <div class="alert search-alert py-2 d-none" role="alert">
-        alert text placeholder that you shouldn't see :&#41
-    </div>
+            </select>
+        </div>
+        <button type="submit" id="search-button" class="btn btn-primary">Search</button>
+        <div class="mt-3">
+            <div class="alert search-alert py-2 d-none" role="alert">
+                alert text placeholder that you shouldn't see :&#41
+            </div>
+        </div>
+    </form>
 </div>
 
 <div class="table-responsive persons-table-container">
