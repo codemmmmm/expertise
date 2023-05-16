@@ -196,7 +196,7 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
     graph.data(data);
     graph.render();
 
-    // the resizing for long labels is called in this event, otherwise it won't
+    // the resizing for long labels is called in this callback, otherwise it won't
     // work with SVG (likely because it isn't drawn instantly)
     graph.on("afterrender", () => {
         graph.getNodes().forEach((node) => {
@@ -214,7 +214,42 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
             });
         });
     });
+    graph.on("node:click", nodeToggleFilter);
     return sourceNode.label;
+}
+
+function nodeToggleFilter(e) {
+    console.log(e);
+    const item = e.item;
+    const id = item.get("id");
+    const label = item.getModel().labels[0];
+    // for person/advisor and offered/wanted expertise toggle both because
+    // there is no way to know which the user wanted
+    switch (label) {
+        case "Person":
+            toggleSelection("pers-" + id);
+            toggleSelection("advi-" + id);
+            break;
+        case "ResearchInterest":
+            toggleSelection("inte-" + id);
+            break;
+        case "Institute":
+            toggleSelection("inst-" + id);
+            break;
+        case "Faculty":
+            toggleSelection("facu-" + id);
+            break;
+        case "Department":
+            toggleSelection("depa-" + id);
+            break;
+        case "Role":
+            toggleSelection("role-" + id);
+            break;
+        case "Expertise":
+            toggleSelection("offe-" + id);
+            toggleSelection("want-" + id);
+            break;
+    }
 }
 
 function showGraph(data, personId) {
@@ -300,8 +335,8 @@ function group_filters(filters, id) {
  * @param {Array} values
  * @returns {boolean}
  */
-function isMatching(filters, values) {
-    if (filters.length === 0) {
+function isMatching(filters, values, ignoreEmpty=false) {
+    if (filters.length === 0 && !ignoreEmpty) {
         return true;
     }
 
@@ -314,8 +349,8 @@ function isMatching(filters, values) {
     return false;
 }
 
-function isMatchingPerson(filters, person) {
-    if (filters.length === 0) {
+function isMatchingPerson(filters, person, ignoreEmpty=false) {
+    if (filters.length === 0 && !ignoreEmpty) {
         return true;
     }
 
@@ -347,16 +382,23 @@ function filter_persons(persons) {
     const offered_filters = group_filters(filters, "offe");
     const wanted_filters = group_filters(filters, "want");
 
+    // filters of different categories are generally connected by AND
+    // the persons/advisors and offered/wanted expertise categories use OR
     const filtered = persons.filter((person) => {
-        return isMatchingPerson(person_filters, person.person) &&
+        const matchingPersons = isMatchingPerson(person_filters, person.person, true) ||
+            isMatching(advisors_filters, person.advisors, true) ||
+            (person_filters.length === 0 && advisors_filters.length === 0);
+        const matchingExpertise = isMatching(offered_filters, person.offered, true) ||
+            isMatching(wanted_filters, person.wanted, true) ||
+            (offered_filters.length === 0 && wanted_filters.length === 0);
+
+        return matchingPersons &&
             isMatching(interests_filters, person.interests) &&
             isMatching(institutes_filters, person.institutes) &&
             isMatching(faculties_filters, person.faculties) &&
             isMatching(departments_filters, person.departments) &&
             isMatching(roles_filters, person.roles) &&
-            isMatching(advisors_filters, person.advisors) &&
-            isMatching(offered_filters, person.offered) &&
-            isMatching(wanted_filters, person.wanted);
+            matchingExpertise;
     });
     return filtered;
 }
