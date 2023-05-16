@@ -265,6 +265,7 @@ function makeGraph(e) {
 function makeModal() {
     const modalEl = document.getElementById("graphModal");
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalEl.addEventListener("hide.bs.modal", handleMinimize);
     modal.show();
     resetModalContent();
 }
@@ -276,6 +277,17 @@ function showModalContent() {
 function resetModalContent() {
     document.querySelector(".graph-spinner").classList.remove("d-none");
     document.querySelector("#graph-container").replaceChildren();
+}
+
+function handleMinimize(e) {
+    const maximizeEl = document.querySelector(".graph-maximize");
+    // should clicking on backdrop minimize or close?
+    // and then could I distinguish between pressing escape and clicking backdrop?
+    if (e.explicitOriginalTarget.classList.contains("graph-minimize")) {
+        maximizeEl.classList.remove("d-none");
+    } else {
+        maximizeEl.classList.add("d-none");
+    }
 }
 
 function group_filters(filters, id) {
