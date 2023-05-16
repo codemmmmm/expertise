@@ -20,6 +20,15 @@ form.home {
     width: min(100%, 500px);
 }
 
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: inherit;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    background-color: inherit;
+    filter: brightness(120%);
+}
+
 div.table-responsive.persons-table-container {
     overflow: auto;
     /* maybe min(...) would be better */
@@ -107,6 +116,10 @@ button.pill {
 
 button.pill:active {
     box-shadow: inset 1px 1px 4px #555555;
+}
+
+button.pill:hover {
+    filter: brightness(90%);
 }
 
 #graphModal > .modal-dialog {
