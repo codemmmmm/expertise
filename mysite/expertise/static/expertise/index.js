@@ -298,6 +298,8 @@ function makeGraph(e) {
         return;
     }
 
+    // for setting focus after modal close
+    e.currentTarget.dataset.lastSelected = true;
     makeModal();
     const personId = e.currentTarget.dataset.pk;
     getGraph(personId).then((data) => {
@@ -313,6 +315,7 @@ function makeModal() {
     const modalEl = document.getElementById("graphModal");
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     modalEl.addEventListener("hide.bs.modal", handleMinimize);
+    modalEl.addEventListener("hidden.bs.modal", setFocus);
     modal.show();
     resetModalContent();
 }
@@ -335,6 +338,12 @@ function handleMinimize(e) {
     } else {
         maximizeEl.classList.add("d-none");
     }
+}
+
+function setFocus() {
+    const target = document.querySelector("tbody > tr[data-last-selected]");
+    delete target.dataset.lastSelected;
+    target.focus();
 }
 
 function group_filters(filters, id) {
