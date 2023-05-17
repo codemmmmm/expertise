@@ -118,27 +118,39 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
     const colors = getColors();
     data.nodes.forEach((node) => {
         node.style = {};
+        node.stateStyles = {
+            active: {
+                lineWidth: 1,
+            },
+        };
         switch (node.labels[0]) {
             case "Person":
                 node.style.fill = colors.person;
+                node.stateStyles.active.fill = colors.person;
                 break;
             case "ResearchInterest":
                 node.style.fill = colors.interest;
+                node.stateStyles.active.fill = colors.interest;
                 break;
             case "Institute":
                 node.style.fill = colors.institute;
+                node.stateStyles.active.fill = colors.institute;
                 break;
             case "Faculty":
                 node.style.fill = colors.faculty;
+                node.stateStyles.active.fill = colors.faculty;
                 break;
             case "Department":
                 node.style.fill = colors.department;
+                node.stateStyles.active.fill = colors.department;
                 break;
             case "Role":
                 node.style.fill = colors.role;
+                node.stateStyles.active.fill = colors.role;
                 break;
             case "Expertise":
                 node.style.fill = colors.expertise;
+                node.stateStyles.active.fill = colors.expertise;
                 break;
         }
     });
@@ -146,8 +158,8 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
     const sourceNode = data.nodes.find((node) => node.id === personId);
     sourceNode.style = {
         ...sourceNode.style,
-        lineWidth: 3,
-        stroke: "#000000",
+        lineWidth: 2,
+        stroke: "#111111",
         shadowColor: "#555555",
         shadowBlur: 3,
     };
