@@ -314,8 +314,6 @@ function makeGraph(e) {
 function makeModal() {
     const modalEl = document.getElementById("graphModal");
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modalEl.addEventListener("hide.bs.modal", handleMinimize);
-    modalEl.addEventListener("hidden.bs.modal", setFocus);
     modal.show();
     resetModalContent();
 }
@@ -327,23 +325,6 @@ function showModalContent() {
 function resetModalContent() {
     document.querySelector(".graph-spinner").classList.remove("d-none");
     document.querySelector("#graph-container").replaceChildren();
-}
-
-function handleMinimize(e) {
-    const maximizeEl = document.querySelector(".graph-maximize");
-    // should clicking on backdrop minimize or close?
-    // and then could I distinguish between pressing escape and clicking backdrop?
-    if (e.explicitOriginalTarget.classList.contains("graph-minimize")) {
-        maximizeEl.classList.remove("d-none");
-    } else {
-        maximizeEl.classList.add("d-none");
-    }
-}
-
-function setFocus() {
-    const target = document.querySelector("tbody > tr[data-last-selected]");
-    delete target.dataset.lastSelected;
-    target?.focus();
 }
 
 function group_filters(filters, id) {
@@ -614,6 +595,44 @@ function initializeSearch() {
     searchEl.addEventListener("click", search);
 }
 
+function handleMinimize() {
+    // should clicking on backdrop minimize or close?
+    // and then could I distinguish between pressing escape and clicking backdrop?
+    const minimizeEl = document.querySelector(".btn-close.graph-minimize");
+    const maximizeEl = document.querySelector(".graph-maximize");
+    if (minimizeEl.dataset.usedMinimize) {
+        maximizeEl.classList.remove("d-none");
+        delete minimizeEl.dataset.usedMinimize;
+        console.log("minimizing");
+    } else {
+        console.log("closing");
+        maximizeEl.classList.add("d-none");
+    }
+}
+
+function setFocus() {
+    const target = document.querySelector("tbody > tr[data-last-selected]");
+    delete target.dataset.lastSelected;
+    target?.focus();
+}
+
+function initializeModal() {
+    const modalEl = document.getElementById("graphModal");
+    // because this event needs to be triggered before the modal.close it is attached
+    // to the modal div and is activated during capture
+    modalEl.addEventListener("click", (e) => {
+        e.target.dataset.usedMinimize = true;
+    }, true);
+    modalEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.target.click();
+        }
+    });
+    modalEl.addEventListener("hide.bs.modal", handleMinimize);
+    modalEl.addEventListener("hidden.bs.modal", setFocus);
+}
+
 function templateResult(item, container) {
     // if I wanted to color the search results, the color of the
     // exclude/highlight states would need to be handled too
@@ -690,6 +709,7 @@ function initializeSelect2() {
 initializeSelect2();
 initializeTableBody();
 initializeSearch();
+initializeModal();
 
 // after refreshing the page the user should have to search again
 // if I don't clear the storage it would show the results of the
