@@ -39,7 +39,14 @@
     </form>
 </div>
 
-<div class="table-responsive d-none persons-table-container">
+{% comment %}
+the scrollable table container is focusable in firefox if the container elements
+are not focusable (feature). set tabindex -1 to prevent this but enables mouse-focusable.
+if tabs/arrows can be used to "scroll", i.e. focus, through the tablerows,
+is that behavior needed?
+https://bugzilla.mozilla.org/show_bug.cgi?id=1069739#c24
+{% endcomment %}
+<div class="table-responsive d-none persons-table-container" tabindex="-1">
     <table class="persons-table table table-hover table-sm">
         {# table-primary for head color because borders don't work with sticky #}
         <thead>

@@ -343,7 +343,7 @@ function handleMinimize(e) {
 function setFocus() {
     const target = document.querySelector("tbody > tr[data-last-selected]");
     delete target.dataset.lastSelected;
-    target.focus();
+    target?.focus();
 }
 
 function group_filters(filters, id) {
@@ -456,7 +456,15 @@ function makePill(text, id) {
     pill.classList.add("pill");
     pill.textContent = text;
     pill.dataset.pk = id;
+    pill.tabIndex = -1;
     pill.addEventListener("click", pillClick);
+    pill.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            e.target.click();
+        }
+    });
     return pill;
 }
 
@@ -464,17 +472,17 @@ function makePill(text, id) {
  * emulate button behavior for elements that can't be a button, e.g. tr.
  * might not work for buttons in forms
  * @param {HTMLElement} element
- * @param {Function} func the function that will be executed on click or keydown
+ * @param {Function} func the function that will be executed on click and keydown
  */
 function emulateButton(element, func) {
     element.setAttribute("role", "button");
-    element.setAttribute("tabindex", "0");
+    element.tabIndex = -1;
     element.addEventListener("click", func);
     element.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
             // prevent scrolling from spacebar input
             e.preventDefault();
-            element.click();
+            e.target.click();
         }
     });
 }
@@ -490,25 +498,26 @@ function appendBasicTableCell(tableRow, values, pkPrefix) {
 }
 
 function appendEmailCell(tableRow, email) {
-    const emailEl = document.createElement("td");
-    tableRow.appendChild(emailEl);
+    const container = document.createElement("td");
+    tableRow.appendChild(container);
     if (!email) {
         return;
     }
     const emailLink = document.createElement("a");
     emailLink.href = "mailto:" + email;
     emailLink.textContent = email;
-    emailEl.appendChild(emailLink);
+    emailLink.tabIndex = -1;
+    container.appendChild(emailLink);
 }
 
 function fillTable(persons) {
-    // TODO: tabindex to pills and tr, keyboard event handlers etc.
     const tableBody = document.querySelector(".persons-table tbody");
     // remove all children
     tableBody.replaceChildren();
     persons.forEach((p) => {
         const tr = document.createElement("tr");
         tr.dataset.pk = p.person.pk;
+        emulateButton(tr, makeGraph);
 
         const personEl = document.createElement("td");
         const personText = concatTitleName(p.person.title, p.person.name);
@@ -527,9 +536,82 @@ function fillTable(persons) {
         appendBasicTableCell(tr, p.offered, "offe");
         appendBasicTableCell(tr, p.wanted, "want");
 
-        emulateButton(tr, makeGraph);
         tableBody.appendChild(tr);
     });
+    // to enable tabbing into the table
+    if (persons.length > 0) {
+        tableBody.firstChild.tabIndex = 0;
+    }
+}
+
+/**
+ * handles tabs and arrow key presses in table body
+ *
+ * left/right switches between the children in a tr.
+ * up/down switches between the trs.
+ * @param {KeyboardEvent} e
+ */
+function handleTableFocus(e) {
+    switch (e.key) {
+        case "ArrowUp":
+            changeRowFocus(e, -1);
+            break;
+        case "ArrowDown":
+            changeRowFocus(e, 1);
+            break;
+        case "ArrowLeft":
+            changeRowChildrenFocus(e, -1);
+            break;
+        case "ArrowRight":
+            changeRowChildrenFocus(e, 1);
+            break;
+        default:
+            return;
+    }
+}
+
+function changeRowFocus(e, direction) {
+    const tbody = e.target.closest("tbody");
+    const rows = tbody.querySelectorAll("tr");
+    const currentRow = document.activeElement.closest("tr");
+    const indexCurrentRow = Array.prototype.indexOf.call(rows, currentRow);
+    const nextRow = (() => {
+        const next = rows[indexCurrentRow + direction];
+        // special case in case the activeElement is a child of the first or last row
+        return next || rows[direction === -1 ? 0 : rows.length - 1];
+    })();
+    nextRow.focus();
+    e.preventDefault();
+}
+
+function changeRowChildrenFocus(e, direction) {
+    if (e.target.nodeName === "TR") {
+        if (direction === 1) {
+            e.target.querySelector("button").focus();
+        }
+    } else {
+        const activeElement = document.activeElement;
+        const rowChildren = activeElement.closest("tr").querySelectorAll("button, a");
+        const indexActive = Array.prototype.indexOf.call(rowChildren, activeElement);
+        const newTarget = rowChildren[indexActive + direction];
+        newTarget?.focus();
+    }
+    e.preventDefault();
+}
+
+function initializeTableBody() {
+    const tbody = document.querySelector(".persons-table tbody");
+    tbody.addEventListener("keydown", handleTableFocus);
+    tbody.addEventListener("focusin", (e) => {
+        tbody.querySelector("[tabindex='0']").tabIndex = -1;
+        // to remember the last focused element in the tbody
+        e.target.tabIndex = 0;
+    });
+}
+
+function initializeSearch() {
+    const searchEl = document.querySelector("#search-button");
+    searchEl.addEventListener("click", search);
 }
 
 function templateResult(item, container) {
@@ -606,8 +688,8 @@ function initializeSelect2() {
 }
 
 initializeSelect2();
-const searchEl = document.querySelector("#search-button");
-searchEl.addEventListener("click", search);
+initializeTableBody();
+initializeSearch();
 
 // after refreshing the page the user should have to search again
 // if I don't clear the storage it would show the results of the
