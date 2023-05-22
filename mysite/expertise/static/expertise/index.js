@@ -1,3 +1,4 @@
+/*global G6, bootstrap*/
 "use strict";
 
 function showSearchLoading(button) {
@@ -105,6 +106,19 @@ function getColors() {
     return colors;
 }
 
+function wrapNodeLabels(str, pattern) {
+    return str.replace(pattern, "$1\n");
+}
+
+/**
+ * gets pattern for inserting line breaks at or before the max length with String.replace
+ * https://stackoverflow.com/a/51506718/15707077
+ * @param {number} maxLength
+ */
+function getWordWrapPattern(maxLength) {
+    return new RegExp(`(?![^\n]{1,${maxLength}}$)([^\n]{1,${maxLength}})\\s`, "g");
+}
+
 /**
  *
  * @param {*} apiData
@@ -116,7 +130,9 @@ function getColors() {
 function drawG6Graph(apiData, personId, containerId, containerWidth){
     const data = convertToGraphData(apiData);
     const colors = getColors();
+    const pattern = getWordWrapPattern(22);
     data.nodes.forEach((node) => {
+        node.label = wrapNodeLabels(node.label, pattern);
         node.style = {};
         node.stateStyles = {
             active: {
@@ -165,6 +181,10 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
     };
 
     // TODO: cluster?
+
+    // change this value instead of directly editing renderer and fitView properties
+    // because for some reason fitView=true breaks getBBox for svg
+    const useCanvas = true;
     const graph = new G6.Graph({
         container: containerId,
         width: containerWidth,
@@ -191,7 +211,7 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
                 },
             },
         },
-        renderer: "canvas",
+        renderer: useCanvas ? "canvas" : "svg",
         layout: {
             type: "force2",
             animate: false,
@@ -199,10 +219,9 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
             linkDistance: 300,
         },
         modes: {
-            // TODO: make highlight only on click?
             default: ["drag-canvas", "zoom-canvas", "activate-relations", "drag-node"],
         },
-        fitView: true,
+        fitView: useCanvas ? true : false,
     });
 
     graph.data(data);
@@ -210,19 +229,25 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
 
     // the resizing for long labels is called in this callback, otherwise it won't
     // work with SVG (likely because it isn't drawn instantly)
-    graph.on("afterrender", () => {
+    graph.on("afterrender", async () => {
+        if (!useCanvas) {
+            // wait till svg is actually drawn
+            await new Promise((r) => setTimeout(r, 100));
+            graph.fitView();
+        }
         graph.getNodes().forEach((node) => {
             // find the text shape by its name
-            const labelShape = node.getContainer().find((e) => e.get("name") === "text-shape");
-            // a node with no text/label would cause a layout error, according to
-            // the library but I'm not sure if that is actually happening
+            const labelShape = node.getContainer().find((el) => el.get("name") === "text-shape");
             if (labelShape === null) {
                 return;
             }
             // get the bounding box of the label
             const labelBBox = labelShape.getBBox();
+            if (labelBBox.height === 0 && labelBBox.width === 0) {
+                console.log("not loaded yet/no height and width");
+            }
             graph.updateItem(node, {
-                size: [labelBBox.width + 15, labelBBox.height + 15],
+                size: [labelBBox.width + 15, labelBBox.height + 20],
             });
         });
     });
