@@ -215,8 +215,9 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
         layout: {
             type: "force2",
             animate: false,
-            maxSpeed: 100,
-            linkDistance: 300,
+            linkDistance: 280,
+            maxSpeed: 1300,
+            preventOverlap: true,
         },
         modes: {
             default: ["drag-canvas", "zoom-canvas", "activate-relations", "drag-node"],
@@ -226,7 +227,6 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
 
     graph.data(data);
     graph.render();
-
     // the resizing for long labels is called in this callback, otherwise it won't
     // work with SVG (likely because it isn't drawn instantly)
     graph.on("afterrender", async () => {
@@ -250,9 +250,30 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
                 size: [labelBBox.width + 15, labelBBox.height + 20],
             });
         });
+        graph.updateLayout({animate: true});
     });
     graph.on("node:click", nodeToggleFilter);
+    if (useCanvas) {
+        graph.on("node:dragstart", function (e) {
+            graph.layout();
+            refreshDraggedNodePosition(e);
+        });
+        graph.on("node:drag", function (e) {
+            refreshDraggedNodePosition(e);
+            graph.layout();
+        });
+        graph.on("node:dragend", function (e) {
+            e.item.get("model").fx = null;
+            e.item.get("model").fy = null;
+        });
+    }
     return sourceNode.label;
+}
+
+function refreshDraggedNodePosition(e) {
+    const model = e.item.get("model");
+    model.fx = e.x;
+    model.fy = e.y;
 }
 
 function nodeToggleFilter(e) {
