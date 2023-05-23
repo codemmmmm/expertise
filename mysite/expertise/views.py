@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseBadRequest
-from neomodel import Q, DoesNotExist
+from neomodel import DoesNotExist, db
 
 from expertise.models import (
     Person,
@@ -69,28 +69,6 @@ def get_suggestions() -> dict:
     }
     return suggestions
 
-def person_contains_value(person, value) -> bool:
-    # use (person.property or "") in case a person does not have that property
-    return (value in (person.name or "").lower() or
-            value in (person.title or "").lower() or
-            value in (person.email or "").lower())
-
-def person_or_connected_node_contains_value(person, value) -> bool:
-    # in this condition I don't check if email contains the value
-    # because this causes an error (caused by bug in neomodel I believe)
-    person_node_condition = (Q(name__icontains=value) |
-        Q(title__icontains=value))
-
-    return (person_contains_value(person, value) or
-        person.interests.filter(name__icontains=value) or
-        person.institutes.filter(name__icontains=value) or
-        person.faculties.filter(name__icontains=value) or
-        person.departments.filter(name__icontains=value) or
-        person.roles.filter(name__icontains=value) or
-        person.offered_expertise.filter(name__icontains=value) or
-        person.wanted_expertise.filter(name__icontains=value) or
-        person.advisors.filter(person_node_condition))
-
 def convert_node_list(nodes) -> list[tuple]:
     return [{"name": node.name, "pk": node.pk} for node in nodes]
 
@@ -117,17 +95,20 @@ def get_all_person_values(persons: list) -> list[dict]:
 
     return entries
 
-def get_filtered_persons(search_param: str) -> list[dict]:
-    # TODO: optimize so I don't get all values of all persons twice
-    # maybe just use a cypher query
-    persons = Person.nodes.all()
-    matching_persons = []
+def get_filtered_data(search_param: str) -> list[dict]:
     if search_param == "":
-        matching_persons = persons
+        matching_persons = Person.nodes.all()
     else:
-        for person in persons:
-            if person_or_connected_node_contains_value(person, search_param):
-                matching_persons.append(person)
+        # this doesn't search email or title of persons
+        # "NOT n:Person" prevents searching persons that are advisors to p:Person because
+        # there is no point in showing them in the table if a search parameter is given
+        query = ("MATCH (p:Person)-[r]-(n) "
+                "WHERE toLower(n.name) CONTAINS $search "
+                "AND NOT n:Person "
+                "OR toLower(p.name) CONTAINS $search "
+                "RETURN DISTINCT p;")
+        results, _ = db.cypher_query(query, {"search": search_param}, resolve_objects=True)
+        matching_persons = [row[0] for row in results]
 
     return get_all_person_values(matching_persons)
 
@@ -193,7 +174,7 @@ def persons_api(request):
         return JsonResponse(data)
 
     search_param = request.GET.get("search")
-    persons_data = get_filtered_persons(search_param.lower())
+    persons_data = get_filtered_data(search_param.lower())
     data["persons"] = persons_data
     return JsonResponse(data)
 
