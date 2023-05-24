@@ -70,29 +70,32 @@ def get_suggestions() -> dict:
     return suggestions
 
 def convert_node_list(nodes) -> list[tuple]:
-    return [{"name": node.name, "pk": node.pk} for node in nodes]
+    return [{"name": node.get("name"), "pk": node.get("pk")} for node in nodes]
 
 def get_all_person_values(persons: list) -> list[dict]:
     entries = []
     for person in persons:
-        data = {}
+        data = person.all_connected()
         data["person"] = {
-            "name": person.name,
-            "title": person.title,
-            "email": person.email,
-            "pk": person.pk,
-        }
-        data["interests"] = convert_node_list(person.interests.all())
-        data["institutes"] = convert_node_list(person.institutes.all())
-        data["faculties"] = convert_node_list(person.faculties.all())
-        data["departments"] = convert_node_list(person.departments.all())
-        data["roles"] = convert_node_list(person.roles.all())
-        data["offered"] = convert_node_list(person.offered_expertise.all())
-        data["wanted"] = convert_node_list(person.wanted_expertise.all())
-        data["advisors"] = [{"name": adv.name, "title": adv.title, "pk": adv.pk}
-                            for adv in person.advisors.all()]
+                "name": person.name,
+                "title": person.title,
+                "email": person.email,
+                "pk": person.pk,
+            }
+        data["interests"] = convert_node_list(data["interests"])
+        data["institutes"] = convert_node_list(data["institutes"])
+        data["faculties"] = convert_node_list(data["faculties"])
+        data["departments"] = convert_node_list(data["departments"])
+        data["roles"] = convert_node_list(data["roles"])
+        data["offered"] = convert_node_list(data["offered"])
+        data["wanted"] = convert_node_list(data["wanted"])
+        data["advisors"] = [{
+            "name": adv.get("name"),
+            "title": adv.get("title"),
+            "pk": adv.get("pk"),
+            }
+            for adv in data["advisors"]]
         entries.append(data)
-
     return entries
 
 def get_filtered_data(search_param: str) -> list[dict]:
@@ -109,7 +112,6 @@ def get_filtered_data(search_param: str) -> list[dict]:
                 "RETURN DISTINCT p;")
         results, _ = db.cypher_query(query, {"search": search_param}, resolve_objects=True)
         matching_persons = [row[0] for row in results]
-
     return get_all_person_values(matching_persons)
 
 def format_nodes_for_graph(nodes):
@@ -130,7 +132,7 @@ def format_rels_for_graph(rels):
             for rel in rels]
 
 def get_graph_data(person: Person):
-    nodes, rels = person.all_connected()
+    nodes, rels = person.graph_data()
     graph_data = {}
     graph_data["nodes"] = format_nodes_for_graph(nodes)
     # append the person that the graph is for
