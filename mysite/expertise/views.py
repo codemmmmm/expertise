@@ -72,7 +72,7 @@ def get_suggestions() -> dict:
 def convert_node_list(nodes) -> list[tuple]:
     return [{"name": node.get("name"), "pk": node.get("pk")} for node in nodes]
 
-def get_all_person_values(persons: list) -> list[dict]:
+def get_all_person_data(persons: list) -> list[dict]:
     entries = []
     for person in persons:
         data = person.all_connected()
@@ -112,7 +112,7 @@ def get_filtered_data(search_param: str) -> list[dict]:
                 "RETURN DISTINCT p;")
         results, _ = db.cypher_query(query, {"search": search_param}, resolve_objects=True)
         matching_persons = [row[0] for row in results]
-    return get_all_person_values(matching_persons)
+    return get_all_person_data(matching_persons)
 
 def format_nodes_for_graph(nodes):
     # the primary keys instead of node ids are used because it's

@@ -40,7 +40,6 @@ function search(e) {
             return;
         }
         const persons = data.persons;
-        //console.log(persons);
         sessionStorage.setItem("persons", JSON.stringify(persons));
         hideSearchLoading(e.target);
         fillTable(filter_persons(persons));
@@ -243,9 +242,6 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
             }
             // get the bounding box of the label
             const labelBBox = labelShape.getBBox();
-            if (labelBBox.height === 0 && labelBBox.width === 0) {
-                console.log("not loaded yet/no height and width");
-            }
             graph.updateItem(node, {
                 size: [labelBBox.width + 15, labelBBox.height + 20],
             });
@@ -277,7 +273,6 @@ function refreshDraggedNodePosition(e) {
 }
 
 function nodeToggleFilter(e) {
-    console.log(e);
     const item = e.item;
     const id = item.get("id");
     const label = item.getModel().labels[0];
@@ -350,7 +345,8 @@ function makeGraph(e) {
     const personId = e.currentTarget.dataset.pk;
     getGraph(personId).then((data) => {
         if (data === undefined) {
-            console.log("... graph request returned undefined");
+            showModalContent();
+            document.querySelector("#graph-container").textContent = "Request failed.";
             return;
         }
         showGraph(data.graph, personId);
@@ -649,9 +645,7 @@ function handleMinimize() {
     if (minimizeEl.dataset.usedMinimize) {
         maximizeEl.classList.remove("d-none");
         delete minimizeEl.dataset.usedMinimize;
-        console.log("minimizing");
     } else {
-        console.log("closing");
         maximizeEl.classList.add("d-none");
     }
 }
