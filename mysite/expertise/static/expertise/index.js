@@ -182,12 +182,11 @@ function drawG6Graph(apiData, personId, containerId, container){
     // TODO: cluster?
 
     // change this value instead of directly editing renderer and fitView properties
-    // because for some reason fitView=true breaks getBBox for svg
     const useCanvas = true;
     const height = 800;
     const graph = new G6.Graph({
         container: containerId,
-        width: 1200, // initial value
+        width: 1600, // initial value
         height: height,
         defaultNode: {
             type: "ellipse",
@@ -222,7 +221,8 @@ function drawG6Graph(apiData, personId, containerId, container){
         modes: {
             default: ["drag-canvas", "zoom-canvas", "activate-relations", "drag-node"],
         },
-        fitView: useCanvas ? true : false,
+        // because I call graph.fitView after setting the correct canvas size
+        fitView: false,
     });
 
     graph.data(data);
@@ -232,13 +232,14 @@ function drawG6Graph(apiData, personId, containerId, container){
 }
 
 function setGraphEvents(graph, container, useCanvas, height) {
-    // the resizing for long labels is called in this callback, otherwise it won't
-    // work with SVG (likely because it isn't drawn instantly)
+    // using afterrender or afterlayout seems to make no difference
     graph.on("afterrender", async () => {
         if (!useCanvas) {
+            // the svg needs to be visible for getting the element sizes if svg used
+            // but the user can see the graph getting resized
+            container.querySelector("canvas, svg").classList.remove("d-none");
             // wait till svg is actually drawn
             await new Promise((r) => setTimeout(r, 100));
-            graph.fitView();
         }
         graph.getNodes().forEach((node) => {
             // find the text shape by its name
@@ -252,8 +253,10 @@ function setGraphEvents(graph, container, useCanvas, height) {
                 size: [labelBBox.width + 15, labelBBox.height + 20],
             });
         });
-        // to turn on animation for dragging nodes
+        // animation for dragging nodes
         graph.updateLayout({animate: true});
+        // unbind because it is only needed for first layout
+        graph.off("afterlayout");
     });
     graph.on("node:click", nodeToggleFilter);
     if (useCanvas) {
@@ -273,10 +276,10 @@ function setGraphEvents(graph, container, useCanvas, height) {
     const modalEl = document.getElementById("graphModal");
     modalEl.addEventListener("shown.bs.modal", () => {
         // needs to be called after modal is shown, else container width = 0
+        container.querySelector("canvas, svg").classList.remove("d-none");
         graph.changeSize(container.clientWidth, height);
         graph.fitView();
         hideModalSpinner();
-        container.querySelector("canvas, svg").classList.remove("d-none");
     });
     window.addEventListener("resize", () => {
         graph.changeSize(container.clientWidth, height);
@@ -665,8 +668,9 @@ function handleMinimize() {
 }
 
 function setFocus() {
+    // if filters are changed by clicking on graph nodes this won't work
     const target = document.querySelector("tbody > tr[data-last-selected]");
-    delete target.dataset.lastSelected;
+    delete target?.dataset.lastSelected;
     target?.focus();
 }
 
