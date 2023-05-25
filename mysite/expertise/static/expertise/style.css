@@ -123,9 +123,13 @@ button.pill:hover {
 }
 
 #graphModal > .modal-dialog {
-    width: 1630px;
+    width: min(100%, 1600px);
     /* override the max-width from modal media queries */
     max-width: none;
+}
+
+#graphModal #graph-container {
+    width: 100%;
 }
 
 button.btn-close {

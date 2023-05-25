@@ -126,7 +126,7 @@ function getWordWrapPattern(maxLength) {
  * @param {*} containerWidth
  * @returns {string} name of the person that the graph is about
  */
-function drawG6Graph(apiData, personId, containerId, containerWidth){
+function drawG6Graph(apiData, personId, containerId, container){
     const data = convertToGraphData(apiData);
     const colors = getColors();
     const pattern = getWordWrapPattern(22);
@@ -184,10 +184,11 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
     // change this value instead of directly editing renderer and fitView properties
     // because for some reason fitView=true breaks getBBox for svg
     const useCanvas = true;
+    const height = 800;
     const graph = new G6.Graph({
         container: containerId,
-        width: containerWidth,
-        height: 800,
+        width: 1200, // initial value
+        height: height,
         defaultNode: {
             type: "ellipse",
             style: {
@@ -226,6 +227,11 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
 
     graph.data(data);
     graph.render();
+    setGraphEvents(graph, container, useCanvas, height);
+    return sourceNode.label;
+}
+
+function setGraphEvents(graph, container, useCanvas, height) {
     // the resizing for long labels is called in this callback, otherwise it won't
     // work with SVG (likely because it isn't drawn instantly)
     graph.on("afterrender", async () => {
@@ -246,6 +252,7 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
                 size: [labelBBox.width + 15, labelBBox.height + 20],
             });
         });
+        // to turn on animation for dragging nodes
         graph.updateLayout({animate: true});
     });
     graph.on("node:click", nodeToggleFilter);
@@ -263,7 +270,17 @@ function drawG6Graph(apiData, personId, containerId, containerWidth){
             e.item.get("model").fy = null;
         });
     }
-    return sourceNode.label;
+    const modalEl = document.getElementById("graphModal");
+    modalEl.addEventListener("shown.bs.modal", () => {
+        // needs to be called after modal is shown, else container width = 0
+        graph.changeSize(container.clientWidth, height);
+        graph.fitView();
+        hideModalSpinner();
+        container.querySelector("canvas, svg").classList.remove("d-none");
+    });
+    window.addEventListener("resize", () => {
+        graph.changeSize(container.clientWidth, height);
+    });
 }
 
 function refreshDraggedNodePosition(e) {
@@ -308,14 +325,11 @@ function nodeToggleFilter(e) {
 function showGraph(data, personId) {
     const containerId = "graph-container";
     const container = document.querySelector("#" + containerId);
-    const containerWidth = 1600;
-    container.style.width = containerWidth + "px";
-    const personName = drawG6Graph(data, personId, containerId, containerWidth);
-    showModalContent();
+    const personName = drawG6Graph(data, personId, containerId, container);
 
     // select the svg or canvas element
     const networkEl = document.querySelector("#" + containerId + " > *");
-    networkEl.classList.add("border", "border-info", "rounded", "rounded-1");
+    networkEl.classList.add("border", "border-info", "rounded", "rounded-1", "d-none");
     networkEl.setAttribute("alt", "Network graph about " + personName);
 }
 
@@ -345,7 +359,7 @@ function makeGraph(e) {
     const personId = e.currentTarget.dataset.pk;
     getGraph(personId).then((data) => {
         if (data === undefined) {
-            showModalContent();
+            hideModalSpinner();
             document.querySelector("#graph-container").textContent = "Request failed.";
             return;
         }
@@ -360,7 +374,7 @@ function makeModal() {
     resetModalContent();
 }
 
-function showModalContent() {
+function hideModalSpinner() {
     document.querySelector(".graph-spinner").classList.add("d-none");
 }
 
