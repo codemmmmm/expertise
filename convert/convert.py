@@ -28,6 +28,7 @@ def main() -> int:
     nlp = spacy.load(spacy_model_name)
     csv_path = "/home/moritz/VirtualBox VMs/competence_matrix.csv"
     data = DataAssignment(nlp)
+    print("Reading CSV...")
     with open(csv_path, newline="", encoding="utf-8") as csvfile:
         csv_reader = csv.reader(csvfile, delimiter=",", quotechar="|")
         # skip first two lines without actual data
@@ -36,7 +37,9 @@ def main() -> int:
         for row in csv_reader:
             data.add_entry(row)
 
+    print("Merging data...")
     data.merge()
+    print("Exporting to database...")
     data.export(os.environ["NEO4J_BOLT_URL"])
     return 0
 
