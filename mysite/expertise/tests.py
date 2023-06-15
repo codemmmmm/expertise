@@ -17,9 +17,10 @@ from .views import *
 # because test database for neomodel isn't supported by django?
 url_with_database = os.environ['NEO4J_BOLT_URL']
 split_url = url_with_database.split("/")
-split_url[-1] = "neo4j"
+split_url[-1] = "test"
 config.DATABASE_URL = "/".join(split_url)
-# clear_neo4j_database() doesn't delete constraints
+
+# should I also delete constraints with clear_neo4j_database ?
 
 class IndexViewTestCase(TestCase):
     def setUp(self):
