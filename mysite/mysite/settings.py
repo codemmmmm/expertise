@@ -82,7 +82,7 @@ DATABASES = {
     }
 }
 
-config.DATABASE_URL = os.environ['NEO4J_BOLT_URL'] + '/expertise'
+config.DATABASE_URL = os.environ['NEO4J_BOLT_URL']
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators

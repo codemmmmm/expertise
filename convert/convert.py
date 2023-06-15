@@ -37,7 +37,7 @@ def main() -> int:
             data.add_entry(row)
 
     data.merge()
-    data.export(os.environ["NEO4J_BOLT_URL"] + "/expertise")
+    data.export(os.environ["NEO4J_BOLT_URL"])
     return 0
 
 if __name__ == "__main__":
