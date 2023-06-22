@@ -13,7 +13,7 @@ from expertise.models import (
 )
 from .views import *
 
-# to use the default database "neo4j" for tests
+# to use the database "test" for tests
 # because test database for neomodel isn't supported by django?
 url_with_database = os.environ['NEO4J_BOLT_URL']
 split_url = url_with_database.split("/")

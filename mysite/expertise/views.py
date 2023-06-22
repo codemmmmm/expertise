@@ -13,18 +13,19 @@ from expertise.models import (
 )
 
 def get_suggestions() -> dict:
-    # TODO:
-    # advisors = filter only people that advise someone
-    # offered = filter only what is offered
-    # wanted = filter only what is wanted
-    # maybe with cypher query or somehow filtering nodesets, distinct?
-    # otherwise, save all persons and expertise in a variable instead of searching twice
+    """returns data of all nodes
 
+    the lists with persons and expertise contain all persons/expertise entries.
+    this means that e.g. the offered expertise list can have an entry of an expertise node
+    that is only used as wanted expertise
+    """
+    person_nodes = Person.nodes.all()
+    expertise_nodes = Expertise.nodes.all()
     suggestions = {
         "persons": {
             "class": "person",
             "group": "Persons",
-            "options": Person.nodes.all(),
+            "options": person_nodes,
         },
         "interests": {
             "class": "interest",
@@ -49,7 +50,7 @@ def get_suggestions() -> dict:
         "advisors": {
             "class": "person",
             "group": "Advisors",
-            "options": Person.nodes.all(),
+            "options": person_nodes,
         },
         "roles": {
             "class": "role",
@@ -59,12 +60,12 @@ def get_suggestions() -> dict:
         "offered_expertise": {
             "class": "expertise",
             "group": "Offered expertise",
-            "options": Expertise.nodes.all(),
+            "options": expertise_nodes,
         },
         "wanted_expertise": {
             "class": "expertise",
             "group": "Wanted expertise",
-            "options": Expertise.nodes.all(),
+            "options": expertise_nodes,
         },
     }
     return suggestions
