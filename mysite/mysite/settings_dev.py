@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_neomodel',
     'expertise',
-    # 'expertise.apps.ExpertiseConfig',
 ]
 
 MIDDLEWARE = [
