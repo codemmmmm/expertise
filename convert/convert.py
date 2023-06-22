@@ -1,32 +1,21 @@
 import csv
 import os
+import sys
 
 import spacy
 
 from classes.data_assignment import DataAssignment
 
-# ORIGINAL "PLAN":
-
-# read data
-# ...
-# tokenize with custom tokenizer that may be different for each column
-    # or instead re.split() und dann nlp() für jedes item
-    # und davor leerzeichen trimmen
-    # maybe fully tokenize and then merge until it sees a separation character
-    # retokenizer.merge
-# save a reference to all tokens of a column that a person has
-# merge and process tokens
-    # turn similar tokens into one
-    # adjust the references people have to it
-    # remove the old value so it won't be used again for comparing
-    # rate quality of the tokens/column (nothing entered when it should have something)
-        # bad values if "-," "- and" ":" "and" "("
-    # what to do with abbreviations in braces (ABK)
-
 def main() -> int:
     spacy_model_name = "en_core_web_md"
     nlp = spacy.load(spacy_model_name)
-    csv_path = "/home/moritz/VirtualBox VMs/competence_matrix.csv"
+
+    if not len(sys.argv) >= 2:
+        sys.exit("Please pass the absolute path of the CSV file as argument.")
+    csv_path = sys.argv[1]
+    if not os.path.exists(csv_path):
+        sys.exit("File ", csv_path, " does not exist or can't be accessed (permissions).")
+
     data = DataAssignment(nlp)
     print("Reading CSV...")
     with open(csv_path, newline="", encoding="utf-8") as csvfile:
