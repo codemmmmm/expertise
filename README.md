@@ -8,7 +8,7 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
 
 ## Steps
 
-1. Clone the repository-> `~/expertise` exists
+1. Clone the repository -> `~/expertise` exists
 2. Install some things
     ```
     sudo apt-get update
@@ -52,10 +52,10 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
 
     Generate a secret key for django using `python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'`.
 
-    Write these commands into `~/.bashrc` and `/etc/apache2/envvars`, replacing the <NEO4J_USER>, <NEO4J_PASSWORD> and <KEY>.
+    Write these commands into `~/.bashrc` and `/etc/apache2/envvars`, replacing the NEO4J_USER, NEO4J_PASSWORD and KEY.
     ```
-    export NEO4J_BOLT_URL='bolt://<NEO4J_USER>:<NEO4J_PASSWORD>@localhost:7687/neo4j'
-    export DJANGO_SECRET_KEY='<KEY>'
+    export NEO4J_BOLT_URL='bolt://NEO4J_USER:NEO4J_PASSWORD@localhost:7687/neo4j'
+    export DJANGO_SECRET_KEY='KEY'
     ```
 
     Then run
@@ -64,37 +64,37 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     source ~/expertise/venv/bin/activate
     ```
 
-8. Configure Apache and Django, replacing <USER> with your $USER.
+8. Configure Apache and Django, replacing USER with your $USER.
 
     ```
     mod_wsgi-express module-config | sudo tee /etc/apache2/mods-available/wsgi.load
     sudo a2enmod wsgi
-    sudo usermod -a -G <USER> www-data
+    sudo usermod -a -G USER www-data
     ```
 
     Write this into `/etc/apache2/apache2.conf`
     ```
-    Alias /static/ /home/<USER>/expertise/mysite/static/
+    Alias /static/ /home/USER/expertise/mysite/static/
 
-    <Directory /home/<USER>/expertise/mysite/static>
+    <Directory /home/USER/expertise/mysite/static>
     Require all granted
     </Directory>
 
-    WSGIScriptAlias / /home/<USER>/expertise/mysite/mysite/wsgi.py
-    WSGIPythonHome /home/<USER>/venv/expertise
-    WSGIPythonPath /home/<USER>/expertise/mysite
+    WSGIScriptAlias / /home/USER/expertise/mysite/mysite/wsgi.py
+    WSGIPythonHome /home/USER/venv/expertise
+    WSGIPythonPath /home/USER/expertise/mysite
 
-    <Directory /home/<USER>/expertise/mysite/mysite>
+    <Directory /home/USER/expertise/mysite/mysite>
     <Files wsgi.py>
     Require all granted
     </Files>
     </Directory>
     ```
 
-    Edit the `~/expertise/mysite/mysite/settings.py` and replace <SERVER_IP>.
+    Edit the `~/expertise/mysite/mysite/settings.py` and replace SERVER_IP.
     ```
-    ALLOWED_HOSTS = ['.localhost', '127.0.0.1', '[::1]', <SERVER_IP>]
-    STATIC_ROOT = '/home/<USER>/expertise/mysite/static/'
+    ALLOWED_HOSTS = ['.localhost', '127.0.0.1', '[::1]', SERVER_IP]
+    STATIC_ROOT = '/home/USER/expertise/mysite/static/'
     ```
 
     Run
@@ -104,7 +104,7 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     python3 ~/expertise/mysite/manage.py migrate
     ```
 
-9. Convert the CSV data using `python3 ~/expertise/convert/convert.py <CSV_FILE>`.
+9. Convert the CSV data using `python3 ~/expertise/convert/convert.py CSV_FILE`.
 
 10. HTTPS using certbot
 
