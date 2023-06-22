@@ -126,4 +126,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Override production variables if DJANGO_DEVELOPMENT env variable is true
 if os.getenv('DJANGO_DEVELOPMENT') == 'true':
-    from settings_dev import *
+    from mysite.settings_dev import *
