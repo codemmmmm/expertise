@@ -31,5 +31,5 @@ class PersonValues:
         #        f"{self.institutes_ids}, {self.faculties_ids}, {self.departments_ids},"
         #        f"{self.advisors_ids}, {self.roles_ids}, {self.offered_expertise_ids},"
         #        f"{self.wanted_expertise_ids}")
-        out = f"{self.title + ' ' if self.title else ''}{self.name}, {self.email}"
+        out = f"{self.title + ' ' if self.title else ''}{self.name}{', ' + self.email if self.email else ''}"
         return out

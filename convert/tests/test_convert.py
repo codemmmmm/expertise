@@ -164,7 +164,7 @@ class TestMergeAdvisors(unittest.TestCase):
             "email@tu-dresden.de",
             "data analytics, machine learning, simulation & stuff/",
             "TU Dresden / Computer Science / ZIH",
-            "Prof. Dr. nat. Kraut",
+            "Prof. Dr. nat. Jana Kraut",
             "Researcher, Professor",
             "Public Relations, DevOps",
             "--",
@@ -179,6 +179,52 @@ class TestMergeAdvisors(unittest.TestCase):
         person_with_reassigned_advisor = data._persons[1]
         self.assertEqual(person_with_reassigned_advisor.advisors_ids[0], 0)
         self.assertEqual(data._persons[person_with_reassigned_advisor.advisors_ids[0]].email, "jana.kraut@tu-dresden.de")
+        # check that the title from advisor column was assigned to the
+        # respective person if it had no title
+        self.assertEqual(data._persons[person_with_reassigned_advisor.advisors_ids[0]].title, "Prof. Dr. nat.")
+
+    def test_advisors_found_full_matches(self):
+        """test that full name matches are prioritized over just last name matches"""
+        row1 = [
+            "Prof. Kraut",
+            "nando.kraut@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "--",
+            "comment"]
+        row2 = [
+            "Jana Kraut",
+            "jana.kraut@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Advisor Adv",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "--",
+            "comment"]
+        row3 = [
+            "Heinz-Jan Kunz",
+            "email@tu-dresden.de",
+            "data analytics, machine learning, simulation & stuff/",
+            "TU Dresden / Computer Science / ZIH",
+            "Prof. Dr. nat. Jana Kraut",
+            "Researcher, Professor",
+            "Public Relations, DevOps",
+            "--",
+            "comment"]
+
+        data = self._dataAssignment
+        data.add_entry(row1)
+        data.add_entry(row2)
+        data.add_entry(row3)
+        data._merge_advisors()
+        person_with_reassigned_advisor = data._persons[2]
+        self.assertEqual(person_with_reassigned_advisor.advisors_ids[0], 1)
+        self.assertEqual(data._persons[person_with_reassigned_advisor.advisors_ids[0]].email, "jana.kraut@tu-dresden.de")
+        self.assertEqual(len(data._persons), 4)
         # check that the title from advisor column was assigned to the
         # respective person if it had no title
         self.assertEqual(data._persons[person_with_reassigned_advisor.advisors_ids[0]].title, "Prof. Dr. nat.")

@@ -131,37 +131,60 @@ class DataAssignment:  # better name??? mapping?
         self._merge_by_name(TargetColumns.WANTED_EXPERTISE)
         # TODO: implement self._merge_by_meaning()
 
+    @staticmethod
+    def _get_indices_of_matching_names(names: list[str], value: str, match_only_last_name: bool = False) -> list[int]:
+        indices = []
+        for index, name in enumerate(names):
+            if match_only_last_name:
+                if name.split()[-1] == value:
+                    indices.append(index)
+            else:
+                if name == value:
+                    indices.append(index)
+        return indices
+
     def _merge_advisors(self) -> None:
         """
-        if an advisor has the same (last) name as a person then change the advisor index
-        to point to a person entry. else create a new person and point the advisor
-        index to that
+        if an advisor entry has the same name as a person then change the advisor index
+        to point to a person entry. else create a new person and point the advisor index to that
         """
+        persons_incorrect_names = []
+        persons_missing_data = []
         for person in self._persons:
-            # TODO: maybe use more than the last name if that is available
-            # e.g. Veronika Scholz and Markus Scholz were wrongly merged
-            # but many persons listed as advisors only have last name listed
-
-            # use only the last name of the person to match
-            person_names = [x.name.split()[-1].lower() for x in self._persons]
+            person_names = [x.name.lower() for x in self._persons]
             for list_index, advisor_index in enumerate(person.advisors_ids):
                 advisor = self._advisors[advisor_index]
-                try:
-                    index_same_person = person_names.index(advisor[1].split()[-1].lower())
-                    # TODO: search again but allow a single letter difference?
+                # check for exact matches
+                indices_of_matches = self._get_indices_of_matching_names(person_names, advisor[1].lower())
+                if len(indices_of_matches) > 0:
+                    index_same_person = indices_of_matches[0]
+                    if len(indices_of_matches) > 1:
+                        print(f"Multiple persons with the name {advisor[1]} exist and the advisor assignment might be inaccurate")
                     # replace reference to an advisor id with a person id
                     person.advisors_ids[list_index] = index_same_person
-
+                    # assigne their title to the new person entry
                     title_from_person_column = self._persons[index_same_person].title
                     title_from_advisor_column = advisor[0]
-                    # TODO: maybe compare on len(titles.split()) to see if it
-                    # has more title parts listed rather than a longer title
                     if len(title_from_person_column) < len(title_from_advisor_column):
                         self._persons[index_same_person].title = title_from_advisor_column
-                except ValueError:
+                else:
+                    # check for last name matches
+                    indices_of_matches = self._get_indices_of_matching_names(person_names, advisor[1].split()[-1].lower(), True)
+                    if len(indices_of_matches) > 0:
+                        persons_incorrect_names.append(advisor)
+
                     new_person = PersonValues(advisor[0], advisor[1], "", "")
+                    persons_missing_data.append(new_person)
                     self._persons.append(new_person)
                     person.advisors_ids[list_index] = len(self._persons) - 1
+
+        print("Information for the following advisors should be entered:")
+        for person in persons_missing_data:
+            print("   ", person)
+        print("The following advisors likely have a name that is not spelled correctly, is missing a first name or was not connected "
+                "correctly during the conversion:")
+        for person in persons_incorrect_names:
+            print("   ", person)
 
     # instead maybe pass a comparison function to _merge_by_name()
     def _is_similar_word(self, word1: str, word2: str) -> bool:
@@ -232,7 +255,7 @@ class DataAssignment:  # better name??? mapping?
         into academic titles and name.
         """
         # TODO: add more titles
-        title_tokens = ("dr.", "prof.", "nat.", "rer.", )
+        title_tokens = ("dr.", "prof.", "nat.", "rer.", "dr.-ing.")
         title = []
         name = []
         # remove everything after a '('
