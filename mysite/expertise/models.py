@@ -59,10 +59,13 @@ class Person(DjangoNode):
         # I don't inflate the returned nodes because I'd have to check which label each class has
         return nodes, rels
 
-    def all_connected(self):
+    def all_connected(self, inflate: bool=False) -> dict:
         """
         returns dictionary of all nodes directly connected to the person except the
         people the person advises
+
+        Args:
+            inflate (bool, optional): if the node should be inflated to a Node object. Defaults to False.
         """
         person_data = {
             "interests": [],
@@ -75,28 +78,28 @@ class Person(DjangoNode):
             "advisors": [],
         }
         results, _ = self.cypher("MATCH (p:Person)-[r]-(n) WHERE id(p)=$self RETURN r, n")
-        # I don't inflate because the returned nodes are only for turning into json
         for rel, node in results:
             label = list(node.labels)[0]
+            # TODO: turn into match?
             if label == "ResearchInterest":
-                person_data["interests"].append(node)
+                person_data["interests"].append(ResearchInterest.inflate(node) if inflate else node)
             elif label == "Institute":
-                person_data["institutes"].append(node)
+                person_data["institutes"].append(Institute.inflate(node) if inflate else node)
             elif label == "Faculty":
-                person_data["faculties"].append(node)
+                person_data["faculties"].append(Faculty.inflate(node) if inflate else node)
             elif label == "Department":
-                person_data["departments"].append(node)
+                person_data["departments"].append(Department.inflate(node) if inflate else node)
             elif label == "Role":
-                person_data["roles"].append(node)
+                person_data["roles"].append(Role.inflate(node) if inflate else node)
             # all person nodes here should be advisors
             elif label == "Person":
                 # ignore the person nodes that are advised by self
                 if rel.nodes[0] != node:
-                    person_data["advisors"].append(node)
+                    person_data["advisors"].append(Person.inflate(node) if inflate else node)
             elif rel.type == "OFFERS":
-                person_data["offered"].append(node)
+                person_data["offered"].append(Expertise.inflate(node) if inflate else node)
             elif rel.type == "WANTS":
-                person_data["wanted"].append(node)
+                person_data["wanted"].append(Expertise.inflate(node) if inflate else node)
             else:
                 raise ValueError
         return person_data

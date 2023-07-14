@@ -1,6 +1,7 @@
-from django.shortcuts import render
-from django.http import JsonResponse, HttpResponseBadRequest
-from neomodel import DoesNotExist, db
+from django.shortcuts import render, redirect
+from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
+from neomodel import db, DoesNotExist, UniqueProperty, RelationshipTo
+from django_neomodel import DjangoNode
 
 from expertise.models import (
     Person,
@@ -11,6 +12,8 @@ from expertise.models import (
     Role,
     Expertise
 )
+
+from expertise.forms import EditForm
 
 def get_suggestions() -> dict:
     """returns data of all nodes
@@ -132,7 +135,7 @@ def format_rels_for_graph(rels):
             "type": rel.type}
             for rel in rels]
 
-def get_graph_data(person: Person):
+def get_graph_data(person: Person) -> dict:
     nodes, rels = person.graph_data()
     graph_data = {}
     graph_data["nodes"] = format_nodes_for_graph(nodes)
@@ -147,6 +150,86 @@ def get_graph_data(person: Person):
     graph_data["nodes"].append(person_data)
     graph_data["relationships"] = format_rels_for_graph(rels)
     return graph_data
+
+def connect_and_disconnect(
+        nodes_before_change: list[DjangoNode],
+        form_data: list[str],
+        node_class: DjangoNode,
+        rel: RelationshipTo,
+    ) -> None:
+    """connect and disconnect to old and new nodes
+
+    Args:
+        nodes_before_change (list): the nodes that were connected to the person before the form was submitted
+        form_data (list): primary keys of existing nodes or the name of nodes that should be created
+        node_class (DjangoNode)
+        rel (RelationshipTo)
+    """
+    # nodes that were entered in the form and already exist in db
+    existing_form_nodes = []
+    for key_or_value in form_data:
+        key_or_value = key_or_value.strip()
+        node = node_class.nodes.get_or_none(pk=key_or_value)
+        if node:
+            existing_form_nodes.append(node)
+            # if the node wasn't connected before
+            if node not in nodes_before_change:
+                rel.connect(node)
+        else:
+            node = node_class(name=key_or_value).save()
+            rel.connect(node)
+
+    for node in nodes_before_change:
+        # if node was connected but is not in the form anymore
+        if node not in existing_form_nodes:
+            rel.disconnect(node)
+
+def change_connected(person: Person, form_data: dict) -> None:
+    data_before_change = person.all_connected(inflate=True)
+    groups = [
+        ("interests", ResearchInterest, person.interests),
+        ("institutes", Institute, person.institutes),
+        ("faculties", Faculty, person.faculties),
+        ("departments", Department, person.departments),
+        ("advisors", Person, person.advisors),
+        ("roles", Role, person.roles),
+        ("offered", Expertise, person.offered_expertise),
+        ("wanted", Expertise, person.wanted_expertise),
+    ]
+    for key, node_class, rel in groups:
+        connect_and_disconnect(data_before_change[key], form_data[key], node_class, rel)
+
+def update_or_create_person(person: Person, person_value: str, data: dict):
+    if not person:
+        person = Person(name=person_value).save()
+    person.email = data["email"]
+    person.title = data["title"]
+    person.save()
+    return person
+
+def get_initial_data(person: Person) -> dict:
+    connected_data = person.all_connected()
+    data = {
+        "email": person.email,
+        "title": person.title,
+        "interests": [node.get("pk") for node in connected_data["interests"]],
+        "institutes": [node.get("pk") for node in connected_data["institutes"]],
+        "faculties": [node.get("pk") for node in connected_data["faculties"]],
+        "departments": [node.get("pk") for node in connected_data["departments"]],
+        "advisors": [node.get("pk") for node in connected_data["advisors"]],
+        "roles": [node.get("pk") for node in connected_data["roles"]],
+        "offered": [node.get("pk") for node in connected_data["offered"]],
+        "wanted": [node.get("pk") for node in connected_data["wanted"]],
+    }
+    return data
+
+def format_error(field_name: str, message: str, code=None) -> dict:
+    return {
+        field_name: [{
+            "message": message,
+            "code": code or "",
+            }],
+    }
 
 def get_nav_active_marker() -> dict:
     # maybe this should be a constant variable somewhere instead?
@@ -167,8 +250,50 @@ def index(request):
 def edit(request):
     context = {
         "nav_edit": get_nav_active_marker(),
+        "persons": Person.nodes.all(),
     }
+    # should I instead load the whole form in a single view and just have it hidden until searched?
+    # what are the downsides?
+
     return render(request, "expertise/edit.html", context)
+
+def edit_form(request):
+    if request.method == "POST":
+        # either a pk of an existing person or name of new person
+        person_value = request.POST.get("person")
+        if not person_value:
+            return JsonResponse(format_error("person", "Please choose a person or enter a new name."), status=400)
+        form = EditForm(request.POST)
+        # only checks that a valid email was entered
+        if form.is_valid():
+            print("VALID")
+            data = form.cleaned_data
+            person = Person.nodes.get_or_none(pk=person_value)
+            db.begin()
+            try:
+                person = update_or_create_person(person, person_value, data)
+            except Exception as e:
+                db.rollback()
+                print("ROLLBACK")
+                print(e)
+                return JsonResponse(format_error("email", "This email is already in use."), status=422)
+            db.commit()
+            change_connected(person, data)
+            return JsonResponse({})
+        else:
+            print("INVALID")
+            print(form.errors.as_json())
+            return HttpResponse(form.errors.as_json(), content_type="application/json", status=422)
+    else:
+        person = Person.nodes.get_or_none(pk=request.GET.get("id"))
+        initial_data = get_initial_data(person) if person else {}
+        form = EditForm(initial=initial_data)
+    print("")
+    context = {
+        "nav_edit": get_nav_active_marker(),
+        "form": form,
+    }
+    return render(request, "expertise/edit-form.html", context)
 
 def persons_api(request):
     data = {}

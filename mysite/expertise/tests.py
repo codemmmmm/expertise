@@ -1,6 +1,7 @@
 import os
+import sys
 from django.test import TestCase
-from neomodel import config, db, clear_neo4j_database, DoesNotExist
+from neomodel import config, db, clear_neo4j_database, install_all_labels, DoesNotExist
 
 from expertise.models import (
     Person,
@@ -11,16 +12,18 @@ from expertise.models import (
     Role,
     Expertise
 )
+from expertise.forms import EditForm
 from .views import *
 
 # to use the database "test" for tests
-# because test database for neomodel isn't supported by django?
+# because django test database for neomodel isn't supported?
 url_with_database = os.environ['NEO4J_BOLT_URL']
 split_url = url_with_database.split("/")
 split_url[-1] = "test"
-config.DATABASE_URL = "/".join(split_url)
-
-# should I also delete constraints with clear_neo4j_database ?
+test_url = "/".join(split_url)
+db.set_connection(test_url)
+with open(os.devnull, "w") as f:
+    install_all_labels(f)
 
 class IndexViewTestCase(TestCase):
     def setUp(self):
@@ -152,3 +155,191 @@ class GraphApiTestCase(TestCase):
             self.assertIn("startNode", rel)
             self.assertIn("endNode", rel)
             self.assertIn("type", rel)
+
+class EditTestcase(TestCase):
+    def setUp(self):
+        clear_neo4j_database(db)
+
+    def test_initial_form_values(self):
+        # nodes
+        person1 = Person(name="Jake", email="a@a.com", title="title").save()
+        person2 = Person(name="Person").save()
+        interest = ResearchInterest(name="interest").save()
+        institute = Institute(name="institute").save()
+        fac = Faculty(name="faculty").save()
+        dep = Department(name="department").save()
+        role = Role(name="role").save()
+        offered_exp = Expertise(name="offered E").save()
+        wanted_exp = Expertise(name="wanted E").save()
+        # relationships
+        person1.interests.connect(interest)
+        person1.institutes.connect(institute)
+        person1.faculties.connect(fac)
+        person1.departments.connect(dep)
+        person1.roles.connect(role)
+        person1.offered_expertise.connect(offered_exp)
+        person1.wanted_expertise.connect(wanted_exp)
+        person1.advisors.connect(person2)
+
+        response = self.client.get("/expertise/edit-form?id=" + person1.pk)
+        form = response.context["form"]
+        self.assertEqual(form.initial["email"], "a@a.com")
+        self.assertEqual(form.initial["title"], "title")
+        self.assertEqual(form.initial["interests"], [interest.pk])
+        self.assertEqual(form.initial["institutes"], [institute.pk])
+        self.assertEqual(form.initial["faculties"], [fac.pk])
+        self.assertEqual(form.initial["departments"], [dep.pk])
+        self.assertEqual(form.initial["advisors"], [person2.pk])
+        self.assertEqual(form.initial["roles"], [role.pk])
+        self.assertEqual(form.initial["offered"], [offered_exp.pk])
+        self.assertEqual(form.initial["wanted"], [wanted_exp.pk])
+
+    def test_required_email(self):
+        data = {
+            "person": "",
+            "email": "",
+            }
+        form = EditForm(data)
+        self.assertTrue(form.has_error("email", "required"))
+
+        data = {
+            "person": "",
+            "email": "hi@hi.de",
+            }
+        form = EditForm(data)
+        self.assertFalse(form.has_error("email"))
+
+    def test_new_entry(self):
+        """test that the form field doesn't cause errors when a new choice is added"""
+        data = {
+            "email": "x@x.de",
+            "interest": ["new entry not in field's choices"],
+            }
+        form = EditForm(data)
+        self.assertFalse(form.errors)
+
+    def test_form_no_relation_changes(self):
+        # nodes
+        person1 = Person(name="Jake", email="a@a.com", title="title").save()
+        person2 = Person(name="Person").save()
+        interest = ResearchInterest(name="interest").save()
+        offered_exp = Expertise(name="expertise").save()
+        wanted_exp = offered_exp
+        # relationships
+        person1.interests.connect(interest)
+        person1.offered_expertise.connect(offered_exp)
+        person1.wanted_expertise.connect(wanted_exp)
+
+        post_data = {
+            "person": person1.pk,
+            "email": "b@b.com",
+            "title": "",
+            "interests": [interest.pk],
+            "offered": [offered_exp.pk],
+            "wanted": [wanted_exp.pk],
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        person1.refresh()
+        self.assertEqual(person1.email, "b@b.com")
+        self.assertEqual(person1.interests.all()[0], interest)
+        self.assertEqual(len(person1.interests.all()), 1)
+        self.assertEqual(person1.offered_expertise.all()[0], person1.wanted_expertise.all()[0])
+
+    def test_form_changed_relations(self):
+        """test disconnecting an assigned node, adding an existing node, adding a new node"""
+        # nodes
+        person = Person(name="Jake", email="a@a.com", title="title").save()
+        offered_exp = Expertise(name="offered exp").save()
+        wanted_exp = Expertise(name="wanted exp").save()
+        unconnected_exp = Expertise(name="unconnected exp").save()
+        # relationships
+        person.offered_expertise.connect(offered_exp)
+        person.wanted_expertise.connect(wanted_exp)
+
+        post_data = {
+            "person": person.pk,
+            "email": "a@a.com",
+            "title": "title",
+            "offered": [offered_exp.pk, unconnected_exp.pk],
+            "wanted": ["new exp"],
+        }
+        response = self.client.post("/expertise/edit-form", post_data)
+        person.refresh()
+        offered = person.offered_expertise.all()
+        self.assertEqual(len(offered), 2)
+        self.assertIn(offered_exp, offered)
+        self.assertIn(unconnected_exp, offered)
+        wanted = person.wanted_expertise.all()
+        self.assertEqual(len(wanted), 1)
+        self.assertEqual(wanted[0].name, "new exp")
+        self.assertEqual(response.status_code, 200)
+
+    def test_new_person(self):
+        post_data = {
+            "person": "new person",
+            "email": "a@a.com",
+            "offered": ["new expertise"],
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        person = Person.nodes.get(name="new person")
+        self.assertIsNotNone(person)
+        self.assertEqual(person.offered_expertise.all()[0].name, "new expertise")
+
+    def test_duplicate_email(self):
+        person = Person(name="ash", email="a@a.com").save()
+        person2 = Person(name="rock", email="b@b.com").save()
+
+        post_data = {
+            "person": "new person",
+            "email": "a@a.com",
+        }
+        response = self.client.post("/expertise/edit-form", post_data)
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["email"][0]["message"], "This email is already in use.")
+
+        post_data = {
+            "person": person2.pk,
+            "email": "a@a.com",
+        }
+        response = self.client.post("/expertise/edit-form", post_data)
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["email"][0]["message"], "This email is already in use.")
+
+    def test_entity_name_restrictions(self):
+        # TODO: extend tests if more restrictions are introduced
+        person = Person(name="Jake", email="a@a.com", title="title").save()
+        post_data = {
+            "person": person.pk,
+            "email": "a@a.com",
+            "offered": [" new expertise "],
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        self.assertEqual(person.offered_expertise.all()[0].name, "new expertise")
+
+    def test_missing_person_argument(self):
+        # person is not a field in the EditForm
+        post_data = {
+            "person": "",
+            "email": "a@a.com",
+        }
+        response = self.client.post("/expertise/edit-form", post_data)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["person"][0]["message"], "Please choose a person or enter a new name.")
+
+    def test_invalid_form(self):
+        post_data = {
+            "person": "person name",
+        }
+        response = self.client.post("/expertise/edit-form", post_data)
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["email"][0]["message"], "This field is required.")
+        self.assertEqual(len(response.json()), 1)
+
+    def test_test(self):
+        data = {
+            "person": "",
+            "email": "hi@",
+            }
+        form = EditForm(data)
+        form.add_error(None, "non field error")
+        print(form.errors.as_json())
