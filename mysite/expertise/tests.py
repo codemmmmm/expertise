@@ -335,11 +335,4 @@ class EditTestcase(TestCase):
         self.assertEqual(response.json()["email"][0]["message"], "This field is required.")
         self.assertEqual(len(response.json()), 1)
 
-    def test_test(self):
-        data = {
-            "person": "",
-            "email": "hi@",
-            }
-        form = EditForm(data)
-        form.add_error(None, "non field error")
-        print(form.errors.as_json())
+    # test adding new person with same name as existing person

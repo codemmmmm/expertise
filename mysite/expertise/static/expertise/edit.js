@@ -13,28 +13,76 @@ function initializeMultiSelects() {
     $(".form-select:not(.select2-hidden-accessible)").select2(config);
 }
 
+function hideErrors() {
+    const alert = document.querySelector("div.alert-danger");
+    alert.classList.add("d-none");
+    const inputs = document.querySelectorAll(".is-invalid");
+    inputs.forEach((input) => {
+        input.classList.remove("is-invalid");
+    });
+    const feedbackMessages = document.querySelectorAll("div.invalid-feedback");
+    feedbackMessages.forEach((element) => {
+        element.remove();
+    });
+}
+
+function showErrors(errors) {
+    for (const [key, messages] of Object.entries(errors)) {
+        const getInputEl = (fieldName) => {
+            if (fieldName === "__all__") {
+                return document.querySelector("button[type='submit']");
+            } else {
+                return document.querySelector(`[name="${key}"]`);
+            }
+        };
+        const inputEl = getInputEl(key);
+        inputEl.classList.add("is-invalid");
+        const parentEl = inputEl.parentNode;
+        messages.forEach((error) => {
+            const feedback = document.createElement("div");
+            feedback.className = "invalid-feedback";
+            feedback.textContent = error.message;
+            parentEl.appendChild(feedback);
+        });
+    }
+}
+
 async function submitEdit(post_data) {
+    // TODO: only allow submit if all errors (not alerts) are gone?
+    // remove error after the respective input was changed
+
+    hideErrors();
     const url = "edit-form";
     const response = await fetch(url, {
         method: "POST",
         body: post_data,
     });
-    console.log(response.status);
-    if (!response.ok) {
-        const message = `An error has occured: ${response.status}`;
-        throw new Error(message);
+    if (response.ok) {
+        window.location.assign("/expertise/");
+    } else {
+        const errors = await response.json();
+        showErrors(errors);
+        const firstError = document.querySelector("div.invalid-feedback");
+        if (firstError) {
+            firstError.scrollIntoView();
+        }
     }
-    // TODO: handle errors here
-    //const data = await response.json();
-    window.location.assign("/expertise/");
+}
+
+function showAlert(error) {
+    const alert = document.querySelector("div.alert-danger");
+    alert.classList.remove("d-none");
+    alert.textContent = error.message;
 }
 
 function edit(e) {
     e.preventDefault();
     const form = document.querySelector("form.edit");
     const data = new FormData(form);
-    console.log(data);
-    submitEdit(data).catch((error) => console.log(error.message));
+    // TODO: sucess message? / loading spinner
+    submitEdit(data).catch((error) => {
+        showAlert(error);
+    });
 }
 
 function initializeEdit() {
@@ -48,7 +96,8 @@ function initializeEdit() {
 async function loadFullForm(parameter) {
     const url = "edit-form";
     const form = document.querySelector("form");
-    // TODO: error handling
+    const alert = form.querySelector("div.alert-danger");
+    alert.classList.add("d-none");
     const response = await fetch(`${url}?id=${encodeURIComponent(parameter)}`);
     if (!response.ok) {
         const message = `An error has occured: ${response.status}`;
@@ -66,14 +115,16 @@ async function loadFullForm(parameter) {
 function search(e) {
     e.preventDefault();
     const selection = $("#name").select2("data")[0];
-    loadFullForm(selection.id).catch((error) => console.log(error.message));
+    loadFullForm(selection.id).catch((error) => {
+        showAlert(error);
+    });
 }
 
 function initializeSearch() {
     document.querySelector("form.edit").addEventListener("submit", search);
 }
 
-// TODO: entering a new person with same name as existing entry is necessary
+// TODO: entering a new person with same name as existing entry must be possible
 $("#name").select2({
     tags: true,
     //width: "100%",

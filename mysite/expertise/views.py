@@ -223,13 +223,17 @@ def get_initial_data(person: Person) -> dict:
     }
     return data
 
-def format_error(field_name: str, message: str, code=None) -> dict:
-    return {
-        field_name: [{
-            "message": message,
-            "code": code or "",
-            }],
+def add_form_error(errors: dict, field_name: str, message: str, code=None) -> dict:
+    """same as django form error format"""
+    # TODO: use form.add_form_error instead of this function
+    error = {
+        "message": message,
+        "code": code or "",
     }
+    if field_name in errors:
+        errors[field_name].append(error)
+    else:
+        errors[field_name] = [error]
 
 def get_nav_active_marker() -> dict:
     # maybe this should be a constant variable somewhere instead?
@@ -258,15 +262,16 @@ def edit(request):
     return render(request, "expertise/edit.html", context)
 
 def edit_form(request):
+    errors = {}
     if request.method == "POST":
         # either a pk of an existing person or name of new person
         person_value = request.POST.get("person")
         if not person_value:
-            return JsonResponse(format_error("person", "Please choose a person or enter a new name."), status=400)
+            add_form_error(errors, "person", "Please choose a person or enter a new name.")
+            return JsonResponse(errors, status=400)
         form = EditForm(request.POST)
         # only checks that a valid email was entered
         if form.is_valid():
-            print("VALID")
             data = form.cleaned_data
             person = Person.nodes.get_or_none(pk=person_value)
             db.begin()
@@ -274,21 +279,18 @@ def edit_form(request):
                 person = update_or_create_person(person, person_value, data)
             except Exception as e:
                 db.rollback()
-                print("ROLLBACK")
-                print(e)
-                return JsonResponse(format_error("email", "This email is already in use."), status=422)
+                #print(e)
+                add_form_error(errors, "email", "This email is already in use.")
+                return JsonResponse(errors, status=422)
             db.commit()
             change_connected(person, data)
-            return JsonResponse({})
+            return JsonResponse(errors)
         else:
-            print("INVALID")
-            print(form.errors.as_json())
             return HttpResponse(form.errors.as_json(), content_type="application/json", status=422)
     else:
         person = Person.nodes.get_or_none(pk=request.GET.get("id"))
         initial_data = get_initial_data(person) if person else {}
         form = EditForm(initial=initial_data)
-    print("")
     context = {
         "nav_edit": get_nav_active_marker(),
         "form": form,
