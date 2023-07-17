@@ -22,8 +22,27 @@ def get_choices(model_class):
 
 class EditForm(forms.Form):
     """edit form excluding the person"""
-    email = forms.EmailField(label="Email address", required=True, widget=forms.EmailInput(attrs={"class": "form-control"}))
-    title = forms.CharField(label="Academic title", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    # if a helptext is added to a field, the widget also needs aria-describedby
+    name = forms.CharField(
+        label="First and last name",
+        required=True,
+
+    )
+    email = forms.EmailField(
+        label="Email address",
+        required=True,
+        max_length=50,
+        help_text="Please enter your institute email.",
+        widget=forms.EmailInput(attrs={
+            "class": "form-control",
+            "aria-describedby": "id_email_helptext"})
+    )
+    title = forms.CharField(
+        label="Academic title",
+        required=False,
+        max_length=40,
+        widget=forms.TextInput(attrs={"class": "form-control"})
+    )
     person_choices = get_choices(Person)
     interest_choices = get_choices(ResearchInterest)
     institute_choices = get_choices(Institute)

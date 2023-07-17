@@ -210,6 +210,7 @@ def update_or_create_person(person: Person, person_value: str, data: dict):
 def get_initial_data(person: Person) -> dict:
     connected_data = person.all_connected()
     data = {
+        "name": person.name,
         "email": person.email,
         "title": person.title,
         "interests": [node.get("pk") for node in connected_data["interests"]],
