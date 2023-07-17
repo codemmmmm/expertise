@@ -12,7 +12,7 @@
 <form class="edit container-fluid mb-3">
     <div class="mb-3">
         <label for="person" class="form-label">Name</label>
-        <select id="name" class="form-select" name="person" multiple required autofocus oninvalid="this.setCustomValidity('Please choose a person or enter a new person\'s name.')" oninput="this.setCustomValidity('')">
+        <select id="name" class="form-select" name="person" required autofocus oninvalid="this.setCustomValidity('Please choose a person or enter a new person\'s name.')" oninput="this.setCustomValidity('')">
             <option></option>
             {% for person in persons %}
             <option value="{{ person.pk }}">{{ person.name }}</option>
