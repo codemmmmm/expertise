@@ -2,21 +2,21 @@ from neomodel import StringProperty, EmailProperty, RelationshipTo, UniqueIdProp
 from django_neomodel import DjangoNode
 
 class ResearchInterest(DjangoNode):
-    name = StringProperty(unique_index=True, required=True)
+    name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
 
     class Meta:
         app_label = "expertise"
 
 class Institute(DjangoNode):
-    name = StringProperty(unique_index=True, required=True)
+    name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
 
     class Meta:
         app_label = "expertise"
 
 class Faculty(DjangoNode):
-    name = StringProperty(unique_index=True, required=True)
+    name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
 
     class Meta:
@@ -24,14 +24,14 @@ class Faculty(DjangoNode):
         verbose_name_plural = "faculties"
 
 class Department(DjangoNode):
-    name = StringProperty(unique_index=True, required=True)
+    name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
 
     class Meta:
         app_label = "expertise"
 
 class Expertise(DjangoNode):
-    name = StringProperty(unique_index=True, required=True)
+    name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
 
     class Meta:
@@ -39,7 +39,7 @@ class Expertise(DjangoNode):
         verbose_name_plural = "expertise"
 
 class Role(DjangoNode):
-    name = StringProperty(unique_index=True, required=True)
+    name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
 
     class Meta:
@@ -104,11 +104,11 @@ class Person(DjangoNode):
                 raise ValueError
         return person_data
 
-    name = StringProperty(required=True)
+    name = StringProperty(required=True, max_length=120)
     # not required because people mentioned as advisors might not have any data entered
     email = EmailProperty(unique_index=True)
-    title = StringProperty()
-    comment = StringProperty()
+    title = StringProperty(max_length=60)
+    comment = StringProperty(max_length=500)
     pk = UniqueIdProperty()
 
     interests = RelationshipTo(ResearchInterest, "HAS")

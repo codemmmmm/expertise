@@ -150,3 +150,8 @@ button.btn-close.graph-minimize {
     bottom: 2rem;
     z-index: 10;
 }
+
+button.clipboard-button {
+    border: 0;
+    background: transparent;
+}

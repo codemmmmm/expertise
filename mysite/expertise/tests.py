@@ -212,6 +212,8 @@ class EditTestcase(TestCase):
     def test_new_entry(self):
         """test that the form field doesn't cause errors when a new choice is added"""
         data = {
+            "personId": "",
+            "name": "name",
             "email": "x@x.de",
             "interest": ["new entry not in field's choices"],
             }
@@ -231,7 +233,8 @@ class EditTestcase(TestCase):
         person1.wanted_expertise.connect(wanted_exp)
 
         post_data = {
-            "person": person1.pk,
+            "personId": person1.pk,
+            "name": person1.name,
             "email": "b@b.com",
             "title": "",
             "interests": [interest.pk],
@@ -257,9 +260,10 @@ class EditTestcase(TestCase):
         person.wanted_expertise.connect(wanted_exp)
 
         post_data = {
-            "person": person.pk,
-            "email": "a@a.com",
-            "title": "title",
+            "personId": person.pk,
+            "name": person.name,
+            "email": person.email,
+            "title": person.title,
             "offered": [offered_exp.pk, unconnected_exp.pk],
             "wanted": ["new exp"],
         }
@@ -276,7 +280,8 @@ class EditTestcase(TestCase):
 
     def test_new_person(self):
         post_data = {
-            "person": "new person",
+            "personId": "",
+            "name": "new person",
             "email": "a@a.com",
             "offered": ["new expertise"],
         }
@@ -290,7 +295,8 @@ class EditTestcase(TestCase):
         person2 = Person(name="rock", email="b@b.com").save()
 
         post_data = {
-            "person": "new person",
+            "personId": "",
+            "name": "new name",
             "email": "a@a.com",
         }
         response = self.client.post("/expertise/edit-form", post_data)
@@ -298,7 +304,8 @@ class EditTestcase(TestCase):
         self.assertEqual(response.json()["email"][0]["message"], "This email is already in use.")
 
         post_data = {
-            "person": person2.pk,
+            "personId": person2.pk,
+            "name": person2.name,
             "email": "a@a.com",
         }
         response = self.client.post("/expertise/edit-form", post_data)
@@ -309,30 +316,23 @@ class EditTestcase(TestCase):
         # TODO: extend tests if more restrictions are introduced
         person = Person(name="Jake", email="a@a.com", title="title").save()
         post_data = {
-            "person": person.pk,
-            "email": "a@a.com",
+            "personId": person.pk,
+            "name": person.name,
+            "email": person.email,
             "offered": [" new expertise "],
         }
         self.client.post("/expertise/edit-form", post_data)
         self.assertEqual(person.offered_expertise.all()[0].name, "new expertise")
 
-    def test_missing_person_argument(self):
-        # person is not a field in the EditForm
-        post_data = {
-            "person": "",
-            "email": "a@a.com",
-        }
-        response = self.client.post("/expertise/edit-form", post_data)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()["person"][0]["message"], "Please choose a person or enter a new name.")
-
     def test_invalid_form(self):
+        # TODO: test with incorrect personId?
         post_data = {
-            "person": "person name",
+            "personId": "person name",
         }
         response = self.client.post("/expertise/edit-form", post_data)
         self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["name"][0]["message"], "This field is required.")
         self.assertEqual(response.json()["email"][0]["message"], "This field is required.")
-        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(len(response.json()), 2)
 
-    # test adding new person with same name as existing person
+    # test adding new person with same name as existing person?

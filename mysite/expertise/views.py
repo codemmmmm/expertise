@@ -199,9 +199,9 @@ def change_connected(person: Person, form_data: dict) -> None:
     for key, node_class, rel in groups:
         connect_and_disconnect(data_before_change[key], form_data[key], node_class, rel)
 
-def update_or_create_person(person: Person, person_value: str, data: dict):
+def update_or_create_person(person: Person, data: dict):
     if not person:
-        person = Person(name=person_value).save()
+        person = Person(name=data["name"]).save()
     person.email = data["email"]
     person.title = data["title"]
     person.save()
@@ -265,20 +265,20 @@ def edit(request):
 def edit_form(request):
     errors = {}
     if request.method == "POST":
-        # either a pk of an existing person or name of new person
-        person_value = request.POST.get("person")
-        if not person_value:
-            add_form_error(errors, "person", "Please choose a person or enter a new name.")
-            return JsonResponse(errors, status=400)
+        person_id = request.POST.get("personId")
         form = EditForm(request.POST)
-        # only checks that a valid email was entered
         if form.is_valid():
             data = form.cleaned_data
-            person = Person.nodes.get_or_none(pk=person_value)
+            person = Person.nodes.get_or_none(pk=person_id)
+            if not person and person_id:
+                # means that someone manipulated the hidden value or the person was somehow deleted
+                add_form_error(errors, "__all__", "Sorry, the selected person was not found. Please reload the page.")
+                return JsonResponse(errors, status=400)
             db.begin()
             try:
-                person = update_or_create_person(person, person_value, data)
+                person = update_or_create_person(person, data)
             except Exception as e:
+                # TODO: also properly handle error for too long properties
                 db.rollback()
                 #print(e)
                 add_form_error(errors, "email", "This email is already in use.")
@@ -295,6 +295,7 @@ def edit_form(request):
     context = {
         "nav_edit": get_nav_active_marker(),
         "form": form,
+        "person_pk": person.pk if person else "",
     }
     return render(request, "expertise/edit-form.html", context)
 

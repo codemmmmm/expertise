@@ -26,7 +26,8 @@ class EditForm(forms.Form):
     name = forms.CharField(
         label="First and last name",
         required=True,
-
+        max_length=80,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
     )
     email = forms.EmailField(
         label="Email address",
