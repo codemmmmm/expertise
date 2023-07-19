@@ -44,20 +44,33 @@ class EditForm(forms.Form):
         max_length=40,
         widget=forms.TextInput(attrs={"class": "form-control"})
     )
-    person_choices = get_choices(Person)
-    interest_choices = get_choices(ResearchInterest)
-    institute_choices = get_choices(Institute)
-    faculty_choices = get_choices(Faculty)
-    department_choices = get_choices(Department)
-    role_choices = get_choices(Role)
-    expertise_choices = get_choices(Expertise)
 
     widget = forms.SelectMultiple(attrs={"class": "form-select"})
-    interests = MultipleChoiceAndNewField(choices=interest_choices, label="Research interests", required=False, widget=widget)
-    institutes = MultipleChoiceAndNewField(choices=institute_choices, label="Institute", required=False, widget=widget)
-    faculties = MultipleChoiceAndNewField(choices=faculty_choices, label="Faculty", required=False, widget=widget)
-    departments = MultipleChoiceAndNewField(choices=department_choices, label="Department", required=False, widget=widget)
-    advisors = MultipleChoiceAndNewField(choices=person_choices, label="Advisor", required=False, widget=widget)
-    roles = MultipleChoiceAndNewField(choices=role_choices, label="Role in ScaDS.AI", required=False, widget=widget)
-    offered = MultipleChoiceAndNewField(choices=expertise_choices, label="Offered expertise", required=False, widget=widget)
-    wanted = MultipleChoiceAndNewField(choices=expertise_choices, label="Wanted expertise", required=False, widget=widget)
+    interests = MultipleChoiceAndNewField(label="Research interests", required=False, widget=widget)
+    institutes = MultipleChoiceAndNewField(label="Institute", required=False, widget=widget)
+    faculties = MultipleChoiceAndNewField(label="Faculty", required=False, widget=widget)
+    departments = MultipleChoiceAndNewField(label="Department", required=False, widget=widget)
+    advisors = MultipleChoiceAndNewField(label="Advisor", required=False, widget=widget)
+    roles = MultipleChoiceAndNewField(label="Role in ScaDS.AI", required=False, widget=widget)
+    offered = MultipleChoiceAndNewField(label="Offered expertise", required=False, widget=widget)
+    wanted = MultipleChoiceAndNewField(label="Wanted expertise", required=False, widget=widget)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # otherwise the form field choices are not updated after the first initialization
+        person_choices = get_choices(Person)
+        interest_choices = get_choices(ResearchInterest)
+        institute_choices = get_choices(Institute)
+        faculty_choices = get_choices(Faculty)
+        department_choices = get_choices(Department)
+        role_choices = get_choices(Role)
+        expertise_choices = get_choices(Expertise)
+
+        self.fields["interests"].choices = interest_choices
+        self.fields["institutes"].choices = institute_choices
+        self.fields["faculties"].choices = faculty_choices
+        self.fields["departments"].choices = department_choices
+        self.fields["advisors"].choices = person_choices
+        self.fields["roles"].choices = role_choices
+        self.fields["offered"].choices = expertise_choices
+        self.fields["wanted"].choices = expertise_choices

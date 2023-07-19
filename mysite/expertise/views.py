@@ -185,6 +185,9 @@ def connect_and_disconnect(
             rel.disconnect(node)
 
 def change_connected(person: Person, form_data: dict) -> None:
+    # TODO: catch errors in case node with same name already exists
+    # should only happen if the form wasn't sent from the GUI
+    # or there was an error loading the initial data into the form
     data_before_change = person.all_connected(inflate=True)
     groups = [
         ("interests", ResearchInterest, person.interests),

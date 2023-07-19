@@ -15,8 +15,8 @@ from expertise.models import (
 from expertise.forms import EditForm
 from .views import *
 
-# to use the database "test" for tests
-# because django test database for neomodel isn't supported?
+# e.g. the form would still use the non-test database because it is
+# initialized before the test is run
 url_with_database = os.environ['NEO4J_BOLT_URL']
 split_url = url_with_database.split("/")
 split_url[-1] = "test"
@@ -277,6 +277,13 @@ class EditTestcase(TestCase):
         self.assertEqual(len(wanted), 1)
         self.assertEqual(wanted[0].name, "new exp")
         self.assertEqual(response.status_code, 200)
+
+        get_response = self.client.get("/expertise/edit-form?id=" + person.pk)
+        form = get_response.context["form"]
+        # test that the select options in the form were updated
+        expertise_options = [x for x, _ in form.fields["wanted"].choices]
+        new_expertise = Expertise.nodes.get(name="new exp")
+        self.assertIn(new_expertise.pk, expertise_options)
 
     def test_new_person(self):
         post_data = {
