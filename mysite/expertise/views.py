@@ -1,4 +1,5 @@
-from django.shortcuts import render, redirect
+from typing import Any
+from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from neomodel import db, DoesNotExist, UniqueProperty, RelationshipTo
 from django_neomodel import DjangoNode
@@ -73,7 +74,7 @@ def get_suggestions() -> dict:
     }
     return suggestions
 
-def convert_node_list(nodes) -> list[tuple]:
+def convert_node_list(nodes) -> list[dict[str, DjangoNode]]:
     return [{"name": node.get("name"), "pk": node.get("pk")} for node in nodes]
 
 def get_all_person_data(persons: list) -> list[dict]:
@@ -135,21 +136,27 @@ def format_rels_for_graph(rels):
             "type": rel.type}
             for rel in rels]
 
-def get_graph_data(person: Person) -> dict:
-    nodes, rels = person.graph_data()
+def get_graph_data(node_id: str) -> dict:
+    nodes, rels = query_graph_data(node_id)
     graph_data = {}
     graph_data["nodes"] = format_nodes_for_graph(nodes)
-    # append the person that the graph is for
-    person_data = {
-        "id": person.pk,
-        "properties": {
-            "name": person.name
-        },
-        "labels": ["Person"],
-    }
-    graph_data["nodes"].append(person_data)
     graph_data["relationships"] = format_rels_for_graph(rels)
     return graph_data
+
+def query_graph_data(node_id: str) -> tuple[set[Any], list[Any]] :
+    query = "MATCH (n1)-[r*1]-(n2) WHERE n1.pk=$id RETURN n1, r, n2"
+    results, _ = db.cypher_query(query, {"id": node_id})
+    nodes = set()
+    rels = []
+    if results:
+        # add the origin node
+        nodes.add(results[0][0])
+    for row in results:
+        # last relationship in the path/traversal
+        rel = row[1][-1]
+        rels.append(rel)
+        nodes.add(row[2])
+    return nodes, rels
 
 def connect_and_disconnect(
         nodes_before_change: list[DjangoNode],
@@ -227,7 +234,7 @@ def get_initial_data(person: Person) -> dict:
     }
     return data
 
-def add_form_error(errors: dict, field_name: str, message: str, code=None) -> dict:
+def add_form_error(errors: dict, field_name: str, message: str, code=None) -> None:
     """same as django form error format"""
     # TODO: use form.add_form_error instead of this function
     error = {
@@ -315,18 +322,11 @@ def persons_api(request):
 
 def graph_api(request):
     data = {}
-    person_id = request.GET.get("person")
-    if person_id in (None, ""):
-        # maybe different errors for missing parameter and missing value
-        data["error"] = "missing parameter: person"
-        return JsonResponse(data)
+    node_id = request.GET.get("id")
+    if node_id in (None, ""):
+        data["error"] = "missing parameter: id"
+        return JsonResponse(data, status=400)
 
-    try:
-        person_node = Person.nodes.get(pk=person_id)
-    except DoesNotExist:
-        data["error"] = "person does not exist"
-        return JsonResponse(data)
-
-    graph_data = get_graph_data(person_node)
-    data["graph"] = graph_data
+    # do I need to give a proper error for the case that a node with the given key doesn't exist?
+    data["graph"] = get_graph_data(node_id)
     return JsonResponse(data)

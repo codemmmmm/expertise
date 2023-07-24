@@ -1,3 +1,4 @@
+from typing import Any
 from neomodel import StringProperty, EmailProperty, RelationshipTo, UniqueIdProperty
 from django_neomodel import DjangoNode
 
@@ -46,20 +47,7 @@ class Role(DjangoNode):
         app_label = "expertise"
 
 class Person(DjangoNode):
-    def graph_data(self):
-        results, _ = self.cypher("MATCH (p:Person)-[r*1..2]-(n) WHERE id(p)=$self RETURN p, r, n")
-        # use set for nodes because the query can return same node multiple times
-        nodes = set()
-        rels = []
-        for row in results:
-            # last relationship in the path/traversal
-            rel = row[1][-1]
-            rels.append(rel)
-            nodes.add(row[2])
-        # I don't inflate the returned nodes because I'd have to check which label each class has
-        return nodes, rels
-
-    def all_connected(self, inflate: bool=False) -> dict:
+    def all_connected(self, inflate: bool=False) -> dict[str, list[Any]]:
         """
         returns dictionary of all nodes directly connected to the person except the
         people the person advises
@@ -111,7 +99,7 @@ class Person(DjangoNode):
     comment = StringProperty(max_length=500)
     pk = UniqueIdProperty()
 
-    interests = RelationshipTo(ResearchInterest, "HAS")
+    interests = RelationshipTo(ResearchInterest, "INTERESTED_IN")
     institutes = RelationshipTo(Institute, "MEMBER_OF")
     faculties = RelationshipTo(Faculty, "MEMBER_OF")
     departments = RelationshipTo(Department, "MEMBER_OF")

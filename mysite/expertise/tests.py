@@ -111,6 +111,26 @@ class PersonApiTestCase(TestCase):
 class GraphApiTestCase(TestCase):
     def setUp(self):
         clear_neo4j_database(db)
+
+    def test_missing_parameter(self):
+        response = self.client.get("/expertise/graph")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+        response = self.client.get("/expertise/graph?id=")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    def test_person_not_exist(self):
+        response = self.client.get("/expertise/graph?id=abc")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual({
+            "nodes": [],
+            "relationships": [],
+        }, data["graph"])
+
+    def test_data(self):
         # nodes
         person1 = Person(title="Prof", name="Adviso", comment="I am hiring").save()
         person2 = Person(name="Person").save()
@@ -119,33 +139,19 @@ class GraphApiTestCase(TestCase):
         fac = Faculty(name="faculty").save()
         dep = Department(name="department").save()
         role = Role(name="role").save()
-        offered_exp = Expertise(name="offered E").save()
-        wanted_exp = Expertise(name="wanted E").save()
+        expertise1 = Expertise(name="offered E").save()
+        expertise2 = Expertise(name="wanted E").save()
         # relationships
         person1.interests.connect(interest)
         person1.institutes.connect(institute)
+        person1.offered_expertise.connect(expertise1)
+        person1.wanted_expertise.connect(expertise1)
 
-    def test_missing_parameter(self):
-        response = self.client.get("/expertise/graph")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("error", response.json())
-
-        response = self.client.get("/expertise/graph?person=")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("error", response.json())
-
-    def test_person_not_exist(self):
-        response = self.client.get("/expertise/graph?person=abc")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual("person does not exist", response.json()["error"])
-
-    def test_data(self):
-        person = Person.nodes.get(name="Adviso")
-        response = self.client.get("/expertise/graph?person=" + person.pk)
+        response = self.client.get("/expertise/graph?id=" + person1.pk)
         data = response.json()["graph"]
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(len(data["nodes"]) > 1)
-        self.assertTrue(len(data["relationships"]) > 1)
+        self.assertEqual(len(data["nodes"]), 4)
+        self.assertEqual(len(data["relationships"]), 4)
         for node in data["nodes"]:
             self.assertIn("id", node)
             self.assertIn("properties", node)

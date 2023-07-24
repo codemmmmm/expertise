@@ -81,6 +81,9 @@ function convertToGraphData(apiData) {
             case "MEMBER_OF":
                 rel.label = "MEMBER OF";
                 break;
+            case "INTERESTED_IN":
+                rel.label = "INTERESTED IN";
+                break;
             default:
                 rel.label = rel.type;
                 break;
@@ -118,27 +121,21 @@ function getWordWrapPattern(maxLength) {
     return new RegExp(`(?![^\n]{1,${maxLength}}$)([^\n]{1,${maxLength}})\\s`, "g");
 }
 
-/**
- *
- * @param {*} apiData
- * @param {*} personId
- * @param {*} containerId
- * @param {*} containerWidth
- * @returns {string} name of the person that the graph is about
- */
-function drawG6Graph(apiData, personId, containerId, container){
+function prepareGraphData(apiData) {
     const data = convertToGraphData(apiData);
     const colors = getColors();
-    const pattern = getWordWrapPattern(22);
+    const breakStringAt = 22;
+    const regexPattern = getWordWrapPattern(breakStringAt);
     data.nodes.forEach((node) => {
-        node.label = wrapNodeLabels(node.label, pattern);
+        node.label = wrapNodeLabels(node.label, regexPattern);
         node.style = {};
         node.stateStyles = {
             active: {
                 lineWidth: 1,
             },
         };
-        switch (node.labels[0]) {
+        const label = node.labels[0];
+        switch (label) {
             case "Person":
                 node.style.fill = colors.person;
                 node.stateStyles.active.fill = colors.person;
@@ -167,20 +164,23 @@ function drawG6Graph(apiData, personId, containerId, container){
                 node.style.fill = colors.expertise;
                 node.stateStyles.active.fill = colors.expertise;
                 break;
+            default:
+                console.warn(`The node label '${label}' was not recognized. Default styles applied.`);
         }
     });
-    // highlight the node that the graph is about
-    const sourceNode = data.nodes.find((node) => node.id === personId);
-    sourceNode.style = {
-        ...sourceNode.style,
-        lineWidth: 2,
-        stroke: "#111111",
-        shadowColor: "#555555",
-        shadowBlur: 3,
-    };
+    return data;
+}
 
-    // TODO: cluster?
-
+/**
+ *
+ * @param {*} apiData
+ * @param {*} personId
+ * @param {*} containerId
+ * @param {*} containerWidth
+ * @returns {string} name of the person that the graph is about
+ */
+function drawG6Graph(apiData, personId, containerId, container){
+    const data = prepareGraphData(apiData);
     // change this value instead of directly editing renderer and fitView properties
     const useCanvas = true;
     const height = 800;
@@ -218,6 +218,11 @@ function drawG6Graph(apiData, personId, containerId, container){
             maxSpeed: 1300,
             preventOverlap: true,
         },
+        // is the animation configuration bugged?
+        // animateCfg: {
+        //     duration: 1,
+        //     callback: () => { console.log("finished"); },
+        // },
         modes: {
             default: ["drag-canvas", "zoom-canvas", "activate-relations", "drag-node"],
         },
@@ -228,11 +233,14 @@ function drawG6Graph(apiData, personId, containerId, container){
     graph.data(data);
     graph.render();
     setGraphEvents(graph, container, useCanvas, height);
-    return sourceNode.label;
+    graphGlobal = graph;
 }
 
 function setGraphEvents(graph, container, useCanvas, height) {
-    // using afterrender or afterlayout seems to make no difference
+    graph.on("beforerender", () => {
+        // turn animation off, else afterrender event and resizing of the nodes happens late
+        graph.updateLayout({ animate: false });
+    });
     graph.on("afterrender", async () => {
         if (!useCanvas) {
             // the svg needs to be visible for getting the element sizes if svg used
@@ -253,12 +261,12 @@ function setGraphEvents(graph, container, useCanvas, height) {
                 size: [labelBBox.width + 15, labelBBox.height + 20],
             });
         });
+        graph.fitCenter();
         // animation for dragging nodes
-        graph.updateLayout({animate: true});
-        // unbind because it is only needed for first layout
-        graph.off("afterlayout");
+        graph.updateLayout({ animate: true });
     });
     graph.on("node:click", nodeToggleFilter);
+    graph.on("node:click", changeGraphData);
     if (useCanvas) {
         graph.on("node:dragstart", function (e) {
             graph.layout();
@@ -276,7 +284,7 @@ function setGraphEvents(graph, container, useCanvas, height) {
     const modalEl = document.getElementById("graphModal");
     modalEl.addEventListener("shown.bs.modal", () => {
         // needs to be called after modal is shown, else container width = 0
-        container.querySelector("canvas, svg").classList.remove("d-none");
+        container.querySelector("canvas, svg")?.classList.remove("d-none");
         graph.changeSize(container.clientWidth, height);
         graph.fitView();
         hideModalSpinner();
@@ -325,29 +333,44 @@ function nodeToggleFilter(e) {
     }
 }
 
+function changeGraphData(e) {
+    const graph = graphGlobal;
+    const id = e.item.get("id");
+    getGraph(id)
+        .then((data) => {
+            data = prepareGraphData(data.graph);
+            graph.changeData(data);
+            graph.render();
+        })
+        .catch((error) => {
+            hideModalSpinner();
+            document.querySelector("#graph-container").textContent = error.message;
+        });
+}
+
 function showGraph(data, personId) {
     const containerId = "graph-container";
     const container = document.querySelector("#" + containerId);
-    const personName = drawG6Graph(data, personId, containerId, container);
-
+    if (!data.nodes.length) {
+        hideModalSpinner();
+        container.textContent = "No nodes found.";
+        return;
+    }
+    drawG6Graph(data, personId, containerId, container);
     // select the svg or canvas element
     const networkEl = document.querySelector("#" + containerId + " > *");
     networkEl.classList.add("border", "border-info", "rounded", "rounded-1", "d-none");
-    networkEl.setAttribute("alt", "Network graph about " + personName);
+    networkEl.setAttribute("alt", "Network graph");
 }
 
-async function getGraph(personId) {
+async function getGraph(nodeId) {
     // what happens in case of timeout?
     const url = "graph";
-    try {
-        const response = await fetch(`${url}?person=${encodeURIComponent(personId)}`);
-        if (!response.ok) {
-            throw new Error("Network response was not OK");
-        }
-        return response.json();
-    } catch (error) {
-        console.error("There has been a problem with your fetch operation:", error);
+    const response = await fetch(`${url}?id=${encodeURIComponent(nodeId)}`);
+    if (!response.ok) {
+        throw new Error("Request failed");
     }
+    return await response.json();
 }
 
 function makeGraph(e) {
@@ -360,13 +383,13 @@ function makeGraph(e) {
     e.currentTarget.dataset.lastSelected = true;
     makeModal();
     const personId = e.currentTarget.dataset.pk;
-    getGraph(personId).then((data) => {
-        if (data === undefined) {
+    getGraph(personId)
+        .then((data) => {
+            showGraph(data.graph, personId);
+        })
+        .catch((error) => {
             hideModalSpinner();
-            document.querySelector("#graph-container").textContent = "Request failed.";
-            return;
-        }
-        showGraph(data.graph, personId);
+            document.querySelector("#graph-container").textContent = error.message;
     });
 }
 
@@ -773,3 +796,5 @@ initializeModal();
 // if I don't clear the storage it would show the results of the
 // previous search as soon as a search word or filter is entered
 sessionStorage.removeItem("persons");
+
+var graphGlobal = null;
