@@ -42,22 +42,28 @@ function search(e) {
         const persons = data.persons;
         sessionStorage.setItem("persons", JSON.stringify(persons));
         hideSearchLoading(e.target);
-        fillTable(filter_persons(persons));
+        updateTable(persons);
         document.querySelector(".persons-table-container").classList.remove("d-none");
-        updateAlert(persons.length);
     });
 }
 
-function updateAlert(length) {
+function updateTable(persons) {
+    const filteredPersons = filter_persons(persons);
+    fillTable(filteredPersons);
+    updateAlert(persons.length, filteredPersons.length);
+}
+
+function updateAlert(searchedLength, filteredLength) {
     const alertEl = document.querySelector(".search-alert");
     alertEl.classList.remove("d-none");
     alertEl.classList.add("d-inline-block");
-    if (length === null) {
+    if (searchedLength === null) {
         alertEl.textContent = "Search failed!";
         alertEl.classList.remove("alert-success");
         alertEl.classList.add("alert-warning");
     } else {
-        alertEl.textContent = `${length} result${length === 1 ? "" : "s"} found (before filtering).`;
+        alertEl.textContent = `${filteredLength} ${filteredLength === 1 ? "entry" : "entries"}` +
+        ` shown / ${searchedLength} ${searchedLength === 1 ? "entry" : "entries"} found`;
         alertEl.classList.remove("alert-warning");
         alertEl.classList.add("alert-success");
     }
@@ -779,7 +785,7 @@ function initializeSelect2() {
     });
     $searchFilter.on("change", function () {
         const persons = JSON.parse(sessionStorage.getItem("persons")) ?? [];
-        fillTable(filter_persons(persons));
+        updateTable(persons);
     });
     // prevents opening the dropdown after unselecting an item
     $searchFilter.on("select2:unselecting", function () {
