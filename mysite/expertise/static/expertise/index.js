@@ -84,6 +84,9 @@ function convertToGraphData(apiData) {
             case "INTERESTED_IN":
                 rel.label = "INTERESTED IN";
                 break;
+            case "HAS":
+                rel.label = "IS";
+                break;
             default:
                 rel.label = rel.type;
                 break;
