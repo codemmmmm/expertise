@@ -10,10 +10,11 @@ from expertise.models import (
     Faculty,
     Department,
     Role,
-    Expertise
+    Expertise,
+    EditSubmission,
 )
 from expertise.forms import EditForm
-from .views import *
+from expertise.views import *
 
 # e.g. the form would still use the non-test database because it is
 # initialized before the test is run
@@ -162,7 +163,7 @@ class GraphApiTestCase(TestCase):
             self.assertIn("endNode", rel)
             self.assertIn("type", rel)
 
-class EditTestcase(TestCase):
+class EditTestCase(TestCase):
     def setUp(self):
         clear_neo4j_database(db)
 
@@ -348,4 +349,271 @@ class EditTestcase(TestCase):
         self.assertEqual(response.json()["email"][0]["message"], "This field is required.")
         self.assertEqual(len(response.json()), 2)
 
-    # test adding new person with same name as existing person?
+class EditSubmissionTestCase(TestCase):
+    def setUp(self):
+        clear_neo4j_database(db)
+
+    def test_value_comparison(self):
+        self.assertTrue(is_same_string_or_list("abc", "abc"))
+        self.assertTrue(is_same_string_or_list(["abc"], ["abc"]))
+        self.assertFalse(is_same_string_or_list("ab", "abc"))
+        self.assertFalse(is_same_string_or_list(["ab"], ["abc"]))
+        self.assertFalse(is_same_string_or_list(["abc"], ["abc", "ab"]))
+
+        data1 = {
+            "key1": "a",
+            "key2": ["a"],
+            "key3": "",
+            "key4": [],
+        }
+        data2 = {
+            "key1": "a",
+            "key2": ["a"],
+            "key3": "",
+            "key4": [],
+        }
+        self.assertTrue(is_same_data(data1, data2))
+
+        data1 = {
+            "key1": None,
+        }
+        data2 = {
+            "key1": [],
+        }
+        self.assertRaises(TypeError)
+
+        data1 = {
+            "key1": "a",
+            "key2": ["a", "b"],
+        }
+        data2 = {
+            "key1": "a",
+            "key2": ["a"],
+        }
+        self.assertFalse(is_same_data(data1, data2))
+
+        data1 = {
+            "key1": "a",
+        }
+        data2 = {
+            "key1": "b",
+        }
+        self.assertFalse(is_same_data(data1, data2))
+
+    def test_get_submission_existing_person(self):
+        person = Person(name="Jake", email="a@a.com").save()
+        post_data = {
+            "personId": person.pk,
+            "name": person.name,
+            "email": person.email,
+            "title": "new title",
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        submission = get_submission_or_none(person)
+        self.assertIsNotNone(submission)
+
+    def test_get_submission_existing_person_email_change(self):
+        person = Person(name="Jake", email="a@a.com").save()
+        post_data = {
+            "personId": person.pk,
+            "name": person.name,
+            "email": "b@b.com",
+            "title": "new title",
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        submission = get_submission_or_none(person)
+        self.assertIsNotNone(submission)
+
+    def test_get_submission_new_person(self):
+        name = "Jake"
+        email = "a@a.com"
+        post_data = {
+            "personId": "",
+            "name": name,
+            "email": email,
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        # person should not be saved
+        person = Person(name=name, email=email)
+        submission = get_submission_or_none(person)
+        self.assertIsNotNone(submission)
+
+    def test_get_submission_new_person_email_change(self):
+        name = "Jake"
+        email = "a@a.com"
+        post_data = {
+            "personId": "",
+            "name": name,
+            "email": email,
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        # simulates a request where the email was changed
+        person = Person(name=name, email="b@b.com")
+        submission = get_submission_or_none(person)
+        self.assertIsNone(submission)
+
+    def test_save_new_submission_with_change(self):
+        person1 = Person(name="Jake", email="a@a.com").save()
+        exp1 = Expertise(name="expertise").save()
+        exp2 = Expertise(name="expertise 2").save()
+        person1.offered_expertise.connect(exp1)
+        person1.offered_expertise.connect(exp2)
+        data = {
+            "name": person1.name,
+            "email": "b@b.com",
+            "title": person1.title,
+            "offered": [exp1.pk, exp2.pk, "new offered"],
+            "institutes": ["institute"],
+        }
+
+        form = EditForm(data)
+        form.is_valid()
+        save_submission(person1, form.cleaned_data)
+        submission = EditSubmission.objects.first()
+        self.assertEqual(submission.person_id, person1.pk)
+        self.assertEqual(submission.person_id_new, person1.pk)
+        self.assertEqual(submission.person_name_new, person1.name)
+        self.assertEqual(submission.person_email_new, "b@b.com")
+        self.assertEqual(submission.person_title_new, "")
+        self.assertCountEqual(submission.offered, [exp1.pk, exp2.pk])
+        self.assertCountEqual(submission.offered_new, [exp1.pk, exp2.pk, "new offered"])
+        self.assertCountEqual(submission.institutes_new, ["institute"])
+
+        data = {
+            "name": person1.name,
+            "email": "b@b.com",
+            "title": person1.title,
+            "offered": [exp1.pk, exp2.pk, "new offered"],
+            "institutes": [],
+        }
+        form = EditForm(data)
+        form.is_valid()
+        save_submission(person1, form.cleaned_data)
+        submission = EditSubmission.objects.first()
+        self.assertEqual(submission.institutes_new, [])
+
+    def test_new_submission_no_change(self):
+        person1 = Person(name="Jake", email="a@a.com").save()
+        exp1 = Expertise(name="expertise").save()
+        exp2 = Expertise(name="expertise 2").save()
+        person1.offered_expertise.connect(exp1)
+        person1.offered_expertise.connect(exp2)
+        data = {
+            "name": person1.name,
+            "email": person1.email,
+            "offered": [exp1.pk, exp2.pk],
+        }
+
+        form = EditForm(data)
+        form.is_valid()
+        save_submission(person1, form.cleaned_data)
+        self.assertEqual(len(EditSubmission.objects.all()), 0)
+
+    def test_change_existing_submission_existing_person(self):
+        person1 = Person(name="Jake", email="a@a.com").save()
+        exp1 = Expertise(name="expertise").save()
+        exp2 = Expertise(name="expertise 2").save()
+        person1.offered_expertise.connect(exp1)
+        person1.offered_expertise.connect(exp2)
+        # new submission
+        data = {
+            "name": person1.name,
+            "email": person1.email,
+            "offered": [exp1.pk, exp2.pk, "new expertise"],
+        }
+
+        form = EditForm(data)
+        form.is_valid()
+        save_submission(person1, form.cleaned_data)
+
+        # change previous submission
+        data = {
+            "name": "different name",
+            "email": person1.email,
+            "offered": [exp1.pk, exp2.pk],
+        }
+
+        form = EditForm(data)
+        form.is_valid()
+        save_submission(person1, form.cleaned_data)
+        submissions = EditSubmission.objects.all()
+        self.assertEqual(len(submissions), 1)
+        submission = submissions.first()
+        self.assertEqual(submission.person_name_new, "different name")
+        self.assertCountEqual(submission.offered, [exp1.pk, exp2.pk])
+        self.assertCountEqual(submission.offered_new, [exp1.pk, exp2.pk])
+
+    def test_change_existing_submission_existing_person_no_difference(self):
+        person1 = Person(name="Jake", email="a@a.com").save()
+        exp1 = Expertise(name="expertise").save()
+        exp2 = Expertise(name="expertise 2").save()
+        person1.offered_expertise.connect(exp1)
+        person1.offered_expertise.connect(exp2)
+        # new submission
+        data = {
+            "name": "different name",
+            "email": person1.email,
+            "offered": [exp1.pk, exp2.pk, "new expertise"],
+        }
+
+        form = EditForm(data)
+        form.is_valid()
+        save_submission(person1, form.cleaned_data)
+
+        # change previous submission
+        data = {
+            "name": "Jake", # original name
+            "email": person1.email,
+            "offered": [exp1.pk, exp2.pk],
+        }
+
+        form = EditForm(data)
+        form.is_valid()
+        save_submission(person1, form.cleaned_data)
+        submissions = EditSubmission.objects.all()
+        self.assertEqual(len(submissions), 0)
+
+    def test_change_existing_submission_new_person(self):
+        exp1 = Expertise(name="expertise").save()
+        # new submission without saving nodes
+        post_data = {
+            "name": "Jake",
+            "email": "test@test.de",
+            "offered": [exp1.pk, "exp2"],
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        self.assertEqual(len(Person.nodes.all()), 0)
+        submission = EditSubmission.objects.first()
+        self.assertCountEqual(submission.offered, [])
+        self.assertCountEqual(submission.offered_new, [exp1.pk, "exp2"])
+
+        # change previous submission
+        post_data = {
+            "name": "Jake",
+            "email": "test@test.de",
+            "offered": ["exp2"],
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        self.assertEqual(len(Person.nodes.all()), 0)
+        submissions = EditSubmission.objects.all()
+        self.assertEqual(len(submissions), 1)
+        submission = submissions.first()
+        self.assertCountEqual(submission.offered, [])
+        self.assertCountEqual(submission.offered_new, ["exp2"])
+
+    def test_save_submission_no_old_email(self):
+        person = Person(name="Hans").save()
+        post_data = {
+            "personId": person.pk,
+            "name": person.name,
+            "email": "test@test.de",
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        submission = EditSubmission.objects.first()
+        self.assertEqual(submission.person_email, "")
+        self.assertEqual(submission.person_email_new, "test@test.de")
+
+    # test with too long entity names (max length validation for form)
+    # duplicate values in request body?
+    # test submission for setting new and existing person's email the same as existing person
+

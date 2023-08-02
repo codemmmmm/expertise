@@ -1,7 +1,9 @@
-from typing import Any
+from typing import Any, Sequence
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
-from neomodel import db, DoesNotExist, UniqueProperty, RelationshipTo
+from django.db.models import Q
+from django.db import IntegrityError, DatabaseError
+from neomodel import db, DoesNotExist, UniqueProperty, DeflateError, NeomodelException, RelationshipTo
 from django_neomodel import DjangoNode
 
 from expertise.models import (
@@ -11,7 +13,8 @@ from expertise.models import (
     Faculty,
     Department,
     Role,
-    Expertise
+    Expertise,
+    EditSubmission,
 )
 
 from expertise.forms import EditForm
@@ -159,8 +162,8 @@ def query_graph_data(node_id: str) -> tuple[set[Any], list[Any]] :
     return nodes, rels
 
 def connect_and_disconnect(
-        nodes_before_change: list[DjangoNode],
-        form_data: list[str],
+        nodes_before_change: Sequence[DjangoNode],
+        form_data: Sequence[str],
         node_class: DjangoNode,
         rel: RelationshipTo,
     ) -> None:
@@ -191,7 +194,7 @@ def connect_and_disconnect(
         if node not in existing_form_nodes:
             rel.disconnect(node)
 
-def change_connected(person: Person, form_data: dict) -> None:
+def change_connected(person: Person, form_data: dict[str, Sequence[str]]) -> None:
     # TODO: catch errors in case node with same name already exists
     # should only happen if the form wasn't sent from the GUI
     # or there was an error loading the initial data into the form
@@ -209,15 +212,96 @@ def change_connected(person: Person, form_data: dict) -> None:
     for key, node_class, rel in groups:
         connect_and_disconnect(data_before_change[key], form_data[key], node_class, rel)
 
-def update_or_create_person(person: Person, data: dict):
+def try_update_or_create_person(person: Person, data: dict) -> Person:
     if not person:
-        person = Person(name=data["name"]).save()
+        person = Person()
+    person.name = data["name"]
     person.email = data["email"]
     person.title = data["title"]
     person.save()
     return person
 
-def get_initial_data(person: Person) -> dict:
+def is_same_string_or_list(data1: str | Sequence[str], data2: str | Sequence[str]) -> bool:
+    """
+    Args:
+        data1 (str | Sequence[str]): should not be a list with duplicates
+        data2 (str | Sequence[str]): should not be a list with duplicates
+    """
+    if isinstance(data1, str):
+        return data1 == data2
+    return set(data1) == set(data2)
+
+def is_same_data(data: dict[str, str | Sequence[str]], old_data: dict[str, str | Sequence[str]]) -> bool:
+    """return true if all entries in the dictionaries that have truthy values are equal"""
+    for key, value in data.items():
+        old_value = old_data[key]
+        if not is_same_string_or_list(value, old_value):
+            return False
+    return True
+
+def get_submission_or_none(person: Person) -> EditSubmission | None:
+    """return a submission object if a submission with the person's pk or the person's email and name exists.
+
+    the email(new) is checked for the case that the person doesn't exist in Neo4j yet
+
+    Args:
+        person (Person): the person's email can be the same as a submission's email but not the
+                            same as an existing person's email
+    """
+    return EditSubmission.objects.filter(
+        Q(person_id=person.pk) |
+        Q(person_email_new=person.email) & Q(person_name_new=person.name)
+        ).first()
+
+def save_submission(person: Person, data: dict[str, str | Sequence[str]]) -> None:
+    """save the submission to the relational database for later approval
+
+    Args:
+        person (Person): a Person object that might or might not be saved
+        data (dict[str, Sequence[str]]): form data
+    """
+    property_and_key_names = (
+        ("person_name", "name"),
+        ("person_email", "email"),
+        ("person_title", "title"),
+        ("interests", "interests"),
+        ("institutes", "institutes"),
+        ("faculties", "faculties"),
+        ("departments", "departments"),
+        ("advisors", "advisors"),
+        ("roles", "roles"),
+        ("offered", "offered"),
+        ("wanted", "wanted"),
+    )
+    submission = get_submission_or_none(person) or EditSubmission()
+    # if the person existed before this submission
+    if Person.nodes.get_or_none(pk=person.pk):
+        submission.person_id = person.pk
+        submission.person_id_new = person.pk
+
+        old_data = get_person_data(person)
+        if is_same_data(data, old_data):
+            # if a submission was changed again in a way that there is no difference between
+            # the old data and the submission's data, the submission is deleted and not
+            # just not submitted
+
+            # instead do "if not submisson.id"?
+            submission.save()
+            submission.delete()
+            return
+        for property_name, key in property_and_key_names:
+            field_data = old_data[key]
+            setattr(submission, property_name, field_data)
+
+    for property_name, key in property_and_key_names:
+        field_data = data[key]
+        setattr(submission, property_name + "_new", field_data)
+
+    if not submission.person_email:
+        submission.person_email = ""
+    submission.save()
+
+def get_person_data(person: Person) -> dict[str, str | list[str]]:
     connected_data = person.all_connected()
     data = {
         "name": person.name,
@@ -234,13 +318,24 @@ def get_initial_data(person: Person) -> dict:
     }
     return data
 
-def add_form_error(errors: dict, field_name: str, message: str, code=None) -> None:
-    """same as django form error format"""
+def add_form_error(errors: dict[str, list[dict]], field_name: str, message: str, code=None) -> None:
+    """same as django form error format
+
+    Args:
+        errors (dict):
+        field_name (str): "form" for a form error, else the field name
+        message (str):
+        code (_type_, optional):
+    """
+
     # TODO: use form.add_form_error instead of this function
     error = {
         "message": message,
         "code": code or "",
     }
+
+    if field_name == "form":
+        field_name = "__all__"
     if field_name in errors:
         errors[field_name].append(error)
     else:
@@ -282,25 +377,54 @@ def edit_form(request):
             person = Person.nodes.get_or_none(pk=person_id)
             if not person and person_id:
                 # means that someone manipulated the hidden value or the person was somehow deleted
-                add_form_error(errors, "__all__", "Sorry, the selected person was not found. Please reload the page.")
+                add_form_error(errors, "form", "Sorry, the selected person was not found. Please reload the page.")
                 return JsonResponse(errors, status=400)
+
             db.begin()
+            # if the exception cause is properly detected for error messages then the two try blocks can be merged
             try:
-                person = update_or_create_person(person, data)
-            except Exception as e:
+                person = try_update_or_create_person(person, data)
+            except NeomodelException as e:
                 # TODO: also properly handle error for too long properties
+                # e.g. if the form field allows more than database constraint
                 db.rollback()
-                #print(e)
                 add_form_error(errors, "email", "This email is already in use.")
                 return JsonResponse(errors, status=422)
-            db.commit()
-            change_connected(person, data)
-            return JsonResponse(errors)
+            try:
+                change_connected(person, data)
+            except NeomodelException as e:
+                db.rollback()
+                # TODO: proper error message
+                add_form_error(errors, "form", "An entity's name is too long or was entered twice.")
+                return JsonResponse(errors, status=422)
+
+            # rollback and write to submission database
+            db.rollback()
+            try:
+                person.refresh()
+            except Person.DoesNotExist:
+                pass
+
+            try:
+                save_submission(person, data)
+            except IntegrityError as e:
+                message = str(e).lower()
+                # should two same emails be accepted for submissions?
+                if "unique" in message and "email" in message:
+                    add_form_error(errors, "email", "This email is already in use")
+                else:
+                    add_form_error(errors, "form", "Sorry, some of the data you entered is invalid")
+            except DatabaseError:
+                add_form_error(errors, "form", "Sorry, some of the data you entered is invalid")
+            if errors:
+                return JsonResponse(errors, status=422)
+
+            return JsonResponse({})
         else:
             return HttpResponse(form.errors.as_json(), content_type="application/json", status=422)
     else:
         person = Person.nodes.get_or_none(pk=request.GET.get("id"))
-        initial_data = get_initial_data(person) if person else {}
+        initial_data = get_person_data(person) if person else {}
         form = EditForm(initial=initial_data)
     context = {
         "nav_edit": get_nav_active_marker(),
