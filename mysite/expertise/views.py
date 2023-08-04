@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.db.models import Q
 from django.db import IntegrityError, DatabaseError
-from neomodel import db, DoesNotExist, UniqueProperty, DeflateError, NeomodelException, RelationshipTo
+from neomodel import db, NeomodelException, RelationshipTo
 from django_neomodel import DjangoNode
 
 from expertise.models import (
@@ -179,7 +179,7 @@ def connect_and_disconnect(
     existing_form_nodes = []
     for key_or_value in form_data:
         key_or_value = key_or_value.strip()
-        node = node_class.nodes.get_or_none(pk=key_or_value)
+        node = node_class.nodes.get_or_none(pk=key_or_value) # TODO: or node_class.nodes.get_or_none(name=key_or_value) ?
         if node:
             existing_form_nodes.append(node)
             # if the node wasn't connected before
@@ -301,7 +301,7 @@ def save_submission(person: Person, data: dict[str, str | Sequence[str]]) -> Non
         submission.person_email = ""
     submission.save()
 
-def get_person_data(person: Person) -> dict[str, str | list[str]]:
+def get_person_data(person: Person) -> dict[str, str | Sequence[str]]:
     connected_data = person.all_connected()
     data = {
         "name": person.name,
@@ -316,6 +316,42 @@ def get_person_data(person: Person) -> dict[str, str | list[str]]:
         "offered": [node.get("pk") for node in connected_data["offered"]],
         "wanted": [node.get("pk") for node in connected_data["wanted"]],
     }
+    return data
+
+def get_submissions_forms(submissions: Sequence[EditSubmission]) -> Sequence[dict[str, Any]]:
+    """returns forms with the old and new data respectively"""
+    data = []
+    property_and_key_names = (
+        ("person_name", "name"),
+        ("person_email", "email"),
+        ("person_title", "title"),
+        ("interests", "interests"),
+        ("institutes", "institutes"),
+        ("faculties", "faculties"),
+        ("departments", "departments"),
+        ("advisors", "advisors"),
+        ("roles", "roles"),
+        ("offered", "offered"),
+        ("wanted", "wanted"),
+    )
+    # TODO: in frontend? for the entities that don't have a select option: add new one?
+    for submission in submissions:
+        old_data = {}
+        new_data = {}
+        for property_name, key in property_and_key_names:
+            old_data[key] = getattr(submission, property_name)
+            new_data[key] = getattr(submission, property_name + "_new")
+        old_form = EditForm(initial=old_data, prefix=str(submission.id) + "old")
+        for field in old_form:
+            field.field.disabled = True
+        new_form = EditForm(initial=new_data, prefix=str(submission.id) + "new")
+        submission_data = {
+            # for the template the new form must be first argument, old form second
+            "data": list(zip(new_form, old_form)),
+            "id": submission.id,
+        }
+        data.append(submission_data)
+
     return data
 
 def add_form_error(errors: dict[str, list[dict]], field_name: str, message: str, code=None) -> None:
@@ -384,7 +420,7 @@ def edit_form(request):
             # if the exception cause is properly detected for error messages then the two try blocks can be merged
             try:
                 person = try_update_or_create_person(person, data)
-            except NeomodelException as e:
+            except NeomodelException:
                 # TODO: also properly handle error for too long properties
                 # e.g. if the form field allows more than database constraint
                 db.rollback()
@@ -392,7 +428,7 @@ def edit_form(request):
                 return JsonResponse(errors, status=422)
             try:
                 change_connected(person, data)
-            except NeomodelException as e:
+            except NeomodelException:
                 db.rollback()
                 # TODO: proper error message
                 add_form_error(errors, "form", "An entity's name is too long or was entered twice.")
@@ -432,6 +468,16 @@ def edit_form(request):
         "person_pk": person.pk if person else "",
     }
     return render(request, "expertise/edit-form.html", context)
+
+def approve(request):
+    submissions = EditSubmission.objects.all()
+    forms = get_submissions_forms(submissions)
+
+    context = {
+        "nav_approve": get_nav_active_marker(),
+        "forms": forms,
+    }
+    return render(request, "expertise/approve.html", context)
 
 def persons_api(request):
     data = {}

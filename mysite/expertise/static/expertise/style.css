@@ -155,3 +155,8 @@ button.clipboard-button {
     border: 0;
     background: transparent;
 }
+
+.select2-container--default.select2-container--disabled .select2-selection__choice__remove {
+    opacity: 0.5;
+    display: unset;
+}

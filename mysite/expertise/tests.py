@@ -613,7 +613,41 @@ class EditSubmissionTestCase(TestCase):
         self.assertEqual(submission.person_email, "")
         self.assertEqual(submission.person_email_new, "test@test.de")
 
+    def test_get_submissions_data(self):
+        person = Person(name="Jake", email="a@a.com").save()
+        exp1 = Expertise(name="expertise").save()
+        exp2 = Expertise(name="expertise 2").save()
+        person.offered_expertise.connect(exp1)
+        person.offered_expertise.connect(exp2)
+        post_data = {
+            "personId": person.pk,
+            "name": person.name,
+            "email": person.email,
+            "offered": [exp1.pk, exp2.pk, "new expertise"],
+        }
+        response = self.client.post("/expertise/edit-form", post_data)
+
+        post_data = {
+            "personId": "",
+            "name": "Lisa",
+            "email": "test@test.de",
+            "offered": ["expertise3"],
+        }
+        response = self.client.post("/expertise/edit-form", post_data)
+
+        submissions = EditSubmission.objects.all().order_by("id")
+        submissions_data = get_submissions_forms(submissions)
+        self.assertEqual(len(submissions_data), 2)
+        submission_data1 = submissions_data[0]
+        self.assertEqual(submission_data1["new"]["offered"], [exp1.pk, exp2.pk, "new expertise"])
+        self.assertEqual(submission_data1["new"]["name"], person.name)
+        submission_data2 = submissions_data[1]
+        self.assertEqual(submission_data1["old"]["institutes"], [])
+
+
     # test with too long entity names (max length validation for form)
     # duplicate values in request body?
     # test submission for setting new and existing person's email the same as existing person
+
+    # test approval site template?
 
