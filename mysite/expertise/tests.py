@@ -454,6 +454,9 @@ class EditSubmissionTestCase(TestCase):
         self.assertTrue(is_same_string_or_list(["abc"], ["abc"]))
         self.assertFalse(is_same_string_or_list("ab", "abc"))
         self.assertFalse(is_same_string_or_list(["ab"], ["abc"]))
+        self.assertFalse(is_same_string_or_list(["ab"], []))
+        self.assertFalse(is_same_string_or_list([], ["ab"]))
+        self.assertFalse(is_same_string_or_list([""], ["ab"]))
         self.assertFalse(is_same_string_or_list(["abc"], ["abc", "ab"]))
 
         data1 = {
