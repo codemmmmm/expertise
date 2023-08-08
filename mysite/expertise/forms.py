@@ -10,7 +10,18 @@ from expertise.models import (
     Expertise
 )
 
+# TODO: validate should also validate each list item's length
 class MultipleChoiceAndNewField(forms.MultipleChoiceField):
+    def to_python(self, value):
+        if not value:
+            return []
+        elif not isinstance(value, (list, tuple)):
+            raise ValidationError(
+                self.error_messages["invalid_list"], code="invalid_list"
+            )
+        # remove duplicates
+        return list(set([str(val) for val in value]))
+
     """MultipleChoiceField but new values are allowed"""
     def validate(self, value):
         """Validate that the input is a list or tuple."""

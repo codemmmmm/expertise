@@ -163,6 +163,34 @@ class GraphApiTestCase(TestCase):
             self.assertIn("endNode", rel)
             self.assertIn("type", rel)
 
+def get_submission_from_person_id(id: str) -> EditSubmission:
+    return EditSubmission.objects.get(person_id_new=id)
+
+def get_submission_from_person_email(email: str, name: str) -> EditSubmission:
+    return EditSubmission.objects.get(person_email_new=email, person_name_new=name)
+
+def get_post_data(submission: EditSubmission, action) -> dict[str, str | Sequence[str]]:
+    property_and_key_names = (
+        ("person_name", "name"),
+        ("person_email", "email"),
+        ("person_title", "title"),
+        ("interests", "interests"),
+        ("institutes", "institutes"),
+        ("faculties", "faculties"),
+        ("departments", "departments"),
+        ("advisors", "advisors"),
+        ("roles", "roles"),
+        ("offered", "offered"),
+        ("wanted", "wanted"),
+    )
+    post_data = {}
+    for property_name, key in property_and_key_names:
+            prefixed_key = str(submission.id) + "new-" + key
+            post_data[prefixed_key] = getattr(submission, property_name + "_new")
+    post_data["action"] = action
+    post_data["submissionId"] = submission.id
+    return post_data
+
 class EditTestCase(TestCase):
     def setUp(self):
         clear_neo4j_database(db)
@@ -249,6 +277,11 @@ class EditTestCase(TestCase):
             "wanted": [wanted_exp.pk],
         }
         self.client.post("/expertise/edit-form", post_data)
+
+        submission = get_submission_from_person_id(person1.pk)
+        submission_data = get_post_data(submission, "approve")
+        response = self.client.post("/expertise/approve", submission_data)
+
         person1.refresh()
         self.assertEqual(person1.email, "b@b.com")
         self.assertEqual(person1.interests.all()[0], interest)
@@ -275,6 +308,11 @@ class EditTestCase(TestCase):
             "wanted": ["new exp"],
         }
         response = self.client.post("/expertise/edit-form", post_data)
+
+        submission = get_submission_from_person_id(person.pk)
+        submission_data = get_post_data(submission, "approve")
+        response = self.client.post("/expertise/approve", submission_data)
+
         person.refresh()
         offered = person.offered_expertise.all()
         self.assertEqual(len(offered), 2)
@@ -300,6 +338,11 @@ class EditTestCase(TestCase):
             "offered": ["new expertise"],
         }
         self.client.post("/expertise/edit-form", post_data)
+
+        submission = get_submission_from_person_email("a@a.com", "new person")
+        submission_data = get_post_data(submission, "approve")
+        response = self.client.post("/expertise/approve", submission_data)
+
         person = Person.nodes.get(name="new person")
         self.assertIsNotNone(person)
         self.assertEqual(person.offered_expertise.all()[0].name, "new expertise")
@@ -336,6 +379,11 @@ class EditTestCase(TestCase):
             "offered": [" new expertise "],
         }
         self.client.post("/expertise/edit-form", post_data)
+
+        submission = get_submission_from_person_id(person.pk)
+        submission_data = get_post_data(submission, "approve")
+        response = self.client.post("/expertise/approve", submission_data)
+
         self.assertEqual(person.offered_expertise.all()[0].name, "new expertise")
 
     def test_invalid_form(self):
@@ -348,6 +396,54 @@ class EditTestCase(TestCase):
         self.assertEqual(response.json()["name"][0]["message"], "This field is required.")
         self.assertEqual(response.json()["email"][0]["message"], "This field is required.")
         self.assertEqual(len(response.json()), 2)
+
+    def test_new_person_rejected(self):
+        post_data = {
+            "personId": "",
+            "name": "new person",
+            "email": "a@a.com",
+            "offered": ["new expertise"],
+        }
+        self.client.post("/expertise/edit-form", post_data)
+        post_data = {
+            "personId": "",
+            "name": "other name",
+            "email": "b@b.com",
+            "offered": ["other expertise"],
+        }
+        self.client.post("/expertise/edit-form", post_data)
+
+        submission = get_submission_from_person_email("a@a.com", "new person")
+        submission_data = get_post_data(submission, "reject")
+        self.client.post("/expertise/approve", submission_data)
+
+        submission = get_submission_from_person_email("b@b.com", "other name")
+        submission_data = get_post_data(submission, "approve")
+        self.client.post("/expertise/approve", submission_data)
+
+        self.assertEqual(len(Person.nodes.all()), 1)
+        self.assertEqual(len(Expertise.nodes.all()), 1)
+        self.assertEqual(Person.nodes.all()[0].email, "b@b.com")
+
+    def test_duplicate_entity_name(self):
+        interest = ResearchInterest(name="new interest").save()
+        institute = Institute(name="new institute").save()
+        post_data = {
+            "personId": "",
+            "name": "new person",
+            "email": "a@a.com",
+            "interests": [interest.pk, "new interest"],
+            "institutes": ["new institute", institute.pk],
+            "offered": ["new expertise", "new expertise"],
+        }
+        response = self.client.post("/expertise/edit-form", post_data)
+
+        submission = get_submission_from_person_email("a@a.com", "new person")
+        submission_data = get_post_data(submission, "approve")
+        self.client.post("/expertise/approve", submission_data)
+
+        self.assertEqual(len(ResearchInterest.nodes.all()), 1)
+        self.assertEqual(len(Expertise.nodes.all()), 1)
 
 class EditSubmissionTestCase(TestCase):
     def setUp(self):
@@ -639,15 +735,14 @@ class EditSubmissionTestCase(TestCase):
         submissions_data = get_submissions_forms(submissions)
         self.assertEqual(len(submissions_data), 2)
         submission_data1 = submissions_data[0]
-        self.assertEqual(submission_data1["new"]["offered"], [exp1.pk, exp2.pk, "new expertise"])
-        self.assertEqual(submission_data1["new"]["name"], person.name)
+        self.assertCountEqual(submission_data1["data"][9][0].value(), [exp1.pk, exp2.pk, "new expertise"])
+        self.assertCountEqual(submission_data1["data"][0][0].value(), person.name)
         submission_data2 = submissions_data[1]
-        self.assertEqual(submission_data1["old"]["institutes"], [])
-
+        self.assertCountEqual(submission_data1["data"][5][0].value(), [])
 
     # test with too long entity names (max length validation for form)
-    # duplicate values in request body?
     # test submission for setting new and existing person's email the same as existing person
 
-    # test approval site template?
+    # test graph api for two connections between two nodes, e.g. person A -> expertise 1 twice (wanted/offered)
+
 

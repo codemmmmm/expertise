@@ -58,6 +58,7 @@ async function submitEdit(post_data) {
         body: post_data,
     });
     if (response.ok) {
+        // TODO: first say: edit was submitted and is waiting for acceptance
         window.location.assign("/expertise/");
     } else {
         const errors = await response.json();
@@ -87,7 +88,7 @@ function edit(e) {
 
 function initEdit() {
     const button = document.querySelector("button[type='submit']");
-    button.textContent = "Edit";
+    button.textContent = "Submit for approval";
     const form = document.querySelector("form");
     form.removeEventListener("submit", search);
     form.addEventListener("submit", edit);

@@ -11,7 +11,7 @@
 
 {% for form_couple in forms %}
 <div class="container-fluid gx-sm-2 gx-xl-3">
-    <form class="pb-3 {{ type }} {% if type == 'new' %} border border-primary rounded {% endif %}">
+    <form class="pb-3 approve {{ type }} {% if type == 'new' %} border border-primary rounded {% endif %}">
         {% csrf_token %}
         <input type="hidden" name="submissionId" value="{{ form_couple.id }}">
         {% for field_couple in form_couple.data %}
@@ -20,15 +20,12 @@
             <div class="mb-3 col">
                 <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
                 {{ field }}
-                {% if field.help_text %}
-                <div class="form-text" {% if field.id_for_label %} id="{{ field.id_for_label}}_helptext" {% endif %}>{{ field.help_text|safe }}</div>
-                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% endfor %}
-        <button type="submit" id="approve-button" class="btn btn-success me-3">Approve</button>
-        <button type="submit" id="reject-button" class="btn btn-danger">Delete</button>
+        <button type="submit" name="action" value="approve" class="btn btn-success me-3">Approve</button>
+        <button type="submit" name="action" value="reject" class="btn btn-danger">Delete</button>
     </form>
 </div>
 {% endfor %}
