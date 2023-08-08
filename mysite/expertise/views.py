@@ -360,15 +360,20 @@ def get_submissions_forms(submissions: Sequence[EditSubmission]) -> Sequence[dic
         for property_name, key in property_and_key_names:
             old_data[key] = getattr(submission, property_name)
             new_data[key] = getattr(submission, property_name + "_new")
+
         old_form = EditForm(initial=old_data, prefix=str(submission.id) + "old")
         for field in old_form:
             field.field.disabled = True
         new_form = EditForm(initial=new_data, prefix=str(submission.id) + "new")
+
         submission_data = {
-            # for the template the new form must be first argument, old form second
-            "data": list(zip(new_form, old_form)),
+            "data": list(zip(new_form, old_form)), # order of new, old is important
             "id": submission.id,
         }
+        # set attribute for marking changed data
+        for new_field, old_field in submission_data["data"]:
+            if not is_same_string_or_list(new_field.initial, old_field.initial):
+                new_field.new_value_is_different = True
         data.append(submission_data)
 
     return data

@@ -734,11 +734,16 @@ class EditSubmissionTestCase(TestCase):
         submissions = EditSubmission.objects.all().order_by("id")
         submissions_data = get_submissions_forms(submissions)
         self.assertEqual(len(submissions_data), 2)
+
         submission_data1 = submissions_data[0]
-        self.assertCountEqual(submission_data1["data"][9][0].value(), [exp1.pk, exp2.pk, "new expertise"])
-        self.assertCountEqual(submission_data1["data"][0][0].value(), person.name)
+        name_field_index = 0
+        faculties_field_index = 5
+        expertise_field_index = 9
+        # index 0 is the new field
+        self.assertCountEqual(submission_data1["data"][name_field_index][0].value(), person.name)
+        self.assertCountEqual(submission_data1["data"][expertise_field_index][0].value(), [exp1.pk, exp2.pk, "new expertise"])
         submission_data2 = submissions_data[1]
-        self.assertCountEqual(submission_data1["data"][5][0].value(), [])
+        self.assertCountEqual(submission_data1["data"][faculties_field_index][0].value(), [])
 
     # test with too long entity names (max length validation for form)
     # test submission for setting new and existing person's email the same as existing person

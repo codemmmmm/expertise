@@ -17,7 +17,10 @@
         {% for field_couple in form_couple.data %}
         <div class="row">
             {% for field in field_couple %}
-            <div class="mb-3 col">
+            <div class="mb-3 col {% if field.new_value_is_different %} field-changed {% endif %}">
+                {% if field.new_value_is_different %}
+                <span class="visually-hidden">This form field was changed.</span>
+                {% endif %}
                 <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
                 {{ field }}
             </div>

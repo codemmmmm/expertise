@@ -160,3 +160,8 @@ button.clipboard-button {
     opacity: 0.5;
     display: unset;
 }
+
+form.approve .row .col.field-changed input,
+form.approve .row .col.field-changed .select2-container .select2-selection {
+    background-color: #fee71dd2;
+}
