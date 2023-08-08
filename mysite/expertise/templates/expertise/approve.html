@@ -31,6 +31,12 @@
         <button type="submit" name="action" value="reject" class="btn btn-danger">Delete</button>
     </form>
 </div>
+{% empty %}
+<div class="container-fluid">
+    <div class="alert alert-success d-inline-block" role="alert">
+        No submissions have to be approved.
+    </div>
+</div>
 {% endfor %}
 
 {% endblock %}
