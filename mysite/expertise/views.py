@@ -398,29 +398,6 @@ def apply_submission(submission: EditSubmission, data: dict[str, str | Sequence[
 
     # TODO: log change
 
-def add_form_error(errors: dict[str, list[dict]], field_name: str, message: str, code=None) -> None:
-    """same as django form error format
-
-    Args:
-        errors (dict):
-        field_name (str): "form" for a form error, else the field name
-        message (str):
-        code (_type_, optional):
-    """
-
-    # TODO: use form.add_form_error instead of this function
-    error = {
-        "message": message,
-        "code": code or "",
-    }
-
-    if field_name == "form":
-        field_name = "__all__"
-    if field_name in errors:
-        errors[field_name].append(error)
-    else:
-        errors[field_name] = [error]
-
 def get_nav_active_marker() -> dict:
     # maybe this should be a constant variable somewhere instead?
     return {
@@ -448,7 +425,7 @@ def edit(request):
     return render(request, "expertise/edit.html", context)
 
 def edit_form(request):
-    errors = {}
+    errors = ErrorDict()
     if request.method == "POST":
         person_id = request.POST.get("personId")
         form = EditForm(request.POST)
@@ -459,7 +436,7 @@ def edit_form(request):
         person = Person.nodes.get_or_none(pk=person_id)
         if not person and person_id:
             # means that someone manipulated the hidden value or the person was somehow deleted
-            add_form_error(errors, "form", "Sorry, the selected person was not found. Please reload the page.")
+            errors.add_error(None, "Sorry, the selected person was not found. Please reload the page.")
             return JsonResponse(errors, status=400)
 
         db.begin()
@@ -470,14 +447,15 @@ def edit_form(request):
             # TODO: also properly handle error for too long properties
             # e.g. if the form field allows more than database constraint
             db.rollback()
-            add_form_error(errors, "email", "This email is already in use.")
+
+            errors.add_error("email", "This email is already in use.")
             return JsonResponse(errors, status=422)
         try:
             change_connected(person, data)
         except NeomodelException as e:
             db.rollback()
             # TODO: proper error message
-            add_form_error(errors, "form", "An entity's name is too long.")
+            errors.add_error(None, "An entity's name is too long.")
             return JsonResponse(errors, status=422)
 
         # rollback and write to submission database
@@ -493,11 +471,11 @@ def edit_form(request):
             message = str(e).lower()
             # should two same emails be accepted for submissions?
             if "unique" in message and "email" in message:
-                add_form_error(errors, "email", "This email is already in use")
+                errors.add_error("email", "This email is already in use")
             else:
-                add_form_error(errors, "form", "Sorry, some of the data you entered is invalid")
+                errors.add_error(None, "Sorry, some of the data you entered is invalid")
         except DatabaseError:
-            add_form_error(errors, "form", "Sorry, some of the data you entered is invalid")
+            errors.add_error(None, "Sorry, some of the data you entered is invalid")
         if errors:
             return JsonResponse(errors, status=422)
 
