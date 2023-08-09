@@ -337,6 +337,17 @@ def get_person_data(person: Person) -> dict[str, str | Sequence[str]]:
     }
     return data
 
+def get_form_couple_header(new_data: dict[str, str | Sequence[str]], old_data: dict[str, str | Sequence[str]]) -> tuple[str, str]:
+    """returns a short description of the form couple that is shown to the user for
+    the collapsed accordion item
+
+    Returns:
+        tuple[str, str]: description for new and old
+    """
+    new = f'{new_data["name"]}, {new_data["email"]}'
+    old = f'{old_data["name"]}, {old_data["email"]}'.strip()
+    return new, old
+
 def get_submissions_forms(submissions: Sequence[EditSubmission]) -> Sequence[dict[str, Any]]:
     """returns forms with the old and new data respectively"""
     data = []
@@ -369,6 +380,7 @@ def get_submissions_forms(submissions: Sequence[EditSubmission]) -> Sequence[dic
         submission_data = {
             "data": list(zip(new_form, old_form)), # order of new, old is important
             "id": submission.id,
+            "header": get_form_couple_header(new_data, old_data),
         }
         # set attribute for marking changed data
         for new_field, old_field in submission_data["data"]:
