@@ -165,3 +165,11 @@ form.approve .row .col.field-changed input,
 form.approve .row .col.field-changed .select2-container .select2-selection {
     background-color: #fee71dd2;
 }
+
+
+/* because I don't want it to look different after collapsing and expanding */
+.accordion-button.collapsed {
+    color: #0c63e4;
+    background-color: #e7f1ff;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .125);
+}

@@ -1,5 +1,7 @@
 "use strict";
 
+import { showAndLogFormErrors, hideFormErrors, showErrorAlert, hideErrorAlert } from "./utils.js";
+
 function initMultiSelects() {
     const config = {
         placeholder: "", // required for allowClear
@@ -13,45 +15,7 @@ function initMultiSelects() {
     $(".form-select:not(.select2-hidden-accessible)").select2(config);
 }
 
-function hideErrors() {
-    const alert = document.querySelector("div.alert-danger");
-    alert.classList.add("d-none");
-    const inputs = document.querySelectorAll(".is-invalid");
-    inputs.forEach((input) => {
-        input.classList.remove("is-invalid");
-    });
-    const feedbackMessages = document.querySelectorAll("div.invalid-feedback");
-    feedbackMessages.forEach((element) => {
-        element.remove();
-    });
-}
-
-function showErrors(errors) {
-    for (const [key, messages] of Object.entries(errors)) {
-        const getInputEl = (fieldName) => {
-            if (fieldName === "__all__") {
-                return document.querySelector("button[type='submit']");
-            } else {
-                return document.querySelector(`[name="${key}"]`);
-            }
-        };
-        const inputEl = getInputEl(key);
-        inputEl.classList.add("is-invalid");
-        const parentEl = inputEl.parentNode;
-        messages.forEach((error) => {
-            const feedback = document.createElement("div");
-            feedback.className = "invalid-feedback";
-            feedback.textContent = error.message;
-            parentEl.appendChild(feedback);
-        });
-    }
-}
-
 async function submitEdit(post_data) {
-    // TODO: only allow submit if all errors (not alerts) are gone?
-    // remove error after the respective input was changed
-
-    hideErrors();
     const url = "edit-form";
     const response = await fetch(url, {
         method: "POST",
@@ -62,7 +26,8 @@ async function submitEdit(post_data) {
         window.location.assign("/expertise/");
     } else {
         const errors = await response.json();
-        showErrors(errors);
+        const form = document.querySelector("form.edit");
+        showAndLogFormErrors(form, errors);
         const firstError = document.querySelector("div.invalid-feedback");
         if (firstError) {
             firstError.scrollIntoView();
@@ -70,19 +35,15 @@ async function submitEdit(post_data) {
     }
 }
 
-function showAlert(error) {
-    const alert = document.querySelector("div.alert-danger");
-    alert.classList.remove("d-none");
-    alert.textContent = error.message;
-}
-
 function edit(e) {
     e.preventDefault();
     const form = document.querySelector("form.edit");
     const data = new FormData(form);
+    hideErrorAlert(form);
+    hideFormErrors(form);
     // TODO: sucess message? / loading spinner
     submitEdit(data).catch((error) => {
-        showAlert(error);
+        showErrorAlert(form, error);
     });
 }
 
@@ -131,8 +92,7 @@ function initCopyButton() {
 async function loadFullForm(selectedPerson) {
     const url = "edit-form";
     const form = document.querySelector("form");
-    const alert = form.querySelector("div.alert-danger");
-    alert.classList.add("d-none");
+    hideErrorAlert(form);
     const response = await fetch(`${url}?id=${encodeURIComponent(selectedPerson.id)}`);
     if (!response.ok) {
         const message = `An error has occured: ${response.status}`;
@@ -156,9 +116,10 @@ async function loadFullForm(selectedPerson) {
 
 function search(e) {
     e.preventDefault();
+    const form = e.target;
     const selection = $("#name").select2("data")[0];
     loadFullForm(selection).catch((error) => {
-        showAlert(error);
+        showErrorAlert(form, error);
     });
 }
 

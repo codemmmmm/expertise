@@ -124,6 +124,8 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+SEND_EXCEPTIONS_TO_CLIENTS = True
+
 # Override production variables if DJANGO_DEVELOPMENT env variable is true
 if os.getenv('DJANGO_DEVELOPMENT') == 'true':
     from mysite.settings_dev import *

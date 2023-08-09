@@ -1,5 +1,7 @@
 "use strict";
 
+import { showAndLogFormErrors, hideFormErrors, showErrorAlert, hideErrorAlert } from "./utils.js";
+
 function initMultiSelects() {
     const config = {
         placeholder: "", // required for allowClear
@@ -13,11 +15,14 @@ function initMultiSelects() {
     $(".form-select:not(.select2-hidden-accessible)").select2(config);
 }
 
-async function submitSubmission(post_data) {
-    // TODO: only allow submit if all errors (not alerts) are gone?
-    // remove error after the respective input was changed
+function removeAccordionItem(id) {
+    const selector = "#collapse" + id;
+    const accordionBody = document.querySelector(selector);
+    const accordionItem = accordionBody.closest("div.accordion-item");
+    accordionItem.remove();
+}
 
-    //hideErrors();
+async function submitSubmission(post_data) {
     const url = "approve";
     const response = await fetch(url, {
         method: "POST",
@@ -25,9 +30,18 @@ async function submitSubmission(post_data) {
     });
     if (response.ok) {
         console.log("SUCCESS");
+        const data = await response.json();
+        removeAccordionItem(data.id);
     } else {
-        const errors = await response.json();
-        //showErrors(errors);
+        const data = await response.json();
+        if (!data.id) {
+            // this should only happen if something is bugged
+            console.error("The following error response returned without an id: " + data.errors);
+            return;
+        }
+        const form = document.querySelector(`#collapse${data.id} form.approve`);
+        const prefix = data.id + "new-";
+        showAndLogFormErrors(form, data.errors, prefix, data.id);
         const firstError = document.querySelector("div.invalid-feedback");
         if (firstError) {
             firstError.scrollIntoView();
@@ -38,12 +52,13 @@ async function submitSubmission(post_data) {
 function submit(e) {
     e.preventDefault();
     const form = e.target;
+    hideFormErrors(form);
+    hideErrorAlert(form);
     const submitter = e.submitter || form.querySelector("button[value='approve'");
     const data = new FormData(form, submitter);
     // TODO: sucess message? / loading spinner
     submitSubmission(data).catch((error) => {
-        //showAlert(error);
-        console.log(error);
+        showErrorAlert(form, error);
     });
 }
 

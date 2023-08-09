@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Sequence
 from django.test import TestCase
 from neomodel import config, db, clear_neo4j_database, install_all_labels, DoesNotExist
 
@@ -358,7 +359,7 @@ class EditTestCase(TestCase):
         }
         response = self.client.post("/expertise/edit-form", post_data)
         self.assertEqual(response.status_code, 422)
-        self.assertEqual(response.json()["email"][0]["message"], "This email is already in use.")
+        self.assertIn("property `email`", response.json()["email"][0]["message"])
 
         post_data = {
             "personId": person2.pk,
@@ -367,7 +368,7 @@ class EditTestCase(TestCase):
         }
         response = self.client.post("/expertise/edit-form", post_data)
         self.assertEqual(response.status_code, 422)
-        self.assertEqual(response.json()["email"][0]["message"], "This email is already in use.")
+        self.assertIn("property `email`", response.json()["email"][0]["message"])
 
     def test_entity_name_restrictions(self):
         # TODO: extend tests if more restrictions are introduced

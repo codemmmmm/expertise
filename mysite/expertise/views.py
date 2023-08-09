@@ -1,9 +1,10 @@
 from typing import Any, Sequence
 
 from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
+from django.http import HttpResponse, JsonResponse
 from django.db.models import Q
 from django.db import IntegrityError, DatabaseError
+from django.conf import settings
 from neomodel import db, NeomodelException, RelationshipTo
 from django_neomodel import DjangoNode
 
@@ -20,18 +21,25 @@ from expertise.models import (
 
 from expertise.forms import EditForm
 
+# this shouldn't be used to trim an error message if it is a custom message
+MAX_ERROR_LENGTH = 130
+
 class ErrorDict(dict):
     """similar to format of django form errors"""
-    def __init__(self):
-        super().__init__()
 
-    def add_error(self, field: str | None, error: str, full_exception: str | None = None):
+    def add_error(self, field: str | None, message: str, full_exception: str | None = None) -> None:
+        """
+        add error message to dict if SEND_EXCEPTIONS_TO_CLIENTS = True.
+        currently message is assumed to be a substring of full_exception, so it wouldn't
+        show any error to the client when it is set to False
+        """
+        send_exceptions = getattr(settings, "SEND_EXCEPTIONS_TO_CLIENTS", False)
         error = {
-            "message": error,
-            "exception": full_exception,
+            "message": message if send_exceptions else "", # change this to ignore the setting if it is a custom message
+            "exception": full_exception if send_exceptions else "",
         }
 
-        if field == None:
+        if field is None:
             field = "__all__" # form error
         if field in self:
             self[field].append(error)
@@ -214,9 +222,6 @@ def connect_and_disconnect(
             rel.disconnect(node)
 
 def change_connected(person: Person, form_data: dict[str, Sequence[str]]) -> None:
-    # TODO: catch errors in case node with same name already exists
-    # should only happen if the form wasn't sent from the GUI
-    # or there was an error loading the initial data into the form
     data_before_change = person.all_connected(inflate=True)
     groups = [
         ("interests", ResearchInterest, person.interests),
@@ -390,6 +395,21 @@ def get_submissions_forms(submissions: Sequence[EditSubmission]) -> Sequence[dic
 
     return data
 
+def trim_error(error: str) -> str:
+    # with the .. it can be longer than MAX_ERROR_LENGTH
+    return error[:MAX_ERROR_LENGTH] + ".." if len(error) > MAX_ERROR_LENGTH else error
+
+def get_error_response_data(errors: dict[str, Any], id: str | None = None) -> dict[str, Any]:
+    """
+    Returns:
+        dict[str, Any]: dict with keys 'id' and 'errors'
+    """
+    data = {
+        "id": id,
+        "errors": errors,
+    }
+    return data
+
 def apply_submission(submission: EditSubmission, data: dict[str, str | Sequence[str]]) -> None:
     db.begin()
     try:
@@ -403,7 +423,7 @@ def apply_submission(submission: EditSubmission, data: dict[str, str | Sequence[
         person.save()
         change_connected(person, data)
         submission.delete()
-    except Exception as e:
+    except Exception:
         db.rollback()
         raise
     db.commit()
@@ -455,19 +475,19 @@ def edit_form(request):
         # if the exception cause is properly detected for error messages then the two try blocks can be merged
         try:
             person = try_update_or_create_person(person, data)
-        except NeomodelException:
+        except NeomodelException as e:
             # TODO: also properly handle error for too long properties
             # e.g. if the form field allows more than database constraint
             db.rollback()
 
-            errors.add_error("email", "This email is already in use.")
+            errors.add_error("email", trim_error(str(e)), str(e)) # or invalid email?
             return JsonResponse(errors, status=422)
         try:
             change_connected(person, data)
         except NeomodelException as e:
             db.rollback()
             # TODO: proper error message
-            errors.add_error(None, "An entity's name is too long.")
+            errors.add_error(None, trim_error(str(e)), str(e))
             return JsonResponse(errors, status=422)
 
         # rollback and write to submission database
@@ -483,11 +503,11 @@ def edit_form(request):
             message = str(e).lower()
             # should two same emails be accepted for submissions?
             if "unique" in message and "email" in message:
-                errors.add_error("email", "This email is already in use")
+                errors.add_error("email", "This email is already in use", str(e))
             else:
-                errors.add_error(None, "Sorry, some of the data you entered is invalid")
+                errors.add_error(None, trim_error(str(e)), str(e))
         except DatabaseError:
-            errors.add_error(None, "Sorry, some of the data you entered is invalid")
+            errors.add_error(None, trim_error(str(e)), str(e))
         if errors:
             return JsonResponse(errors, status=422)
 
@@ -509,30 +529,30 @@ def approve(request):
         submission_id = request.POST.get("submissionId")
         errors = ErrorDict()
         if not action or not submission_id or action not in ("approve", "reject"):
-            errors.add_error(None, "Sorry, something went wrong. Please reload the page.")
-            return JsonResponse(errors, status=400)
+            errors.add_error(None, "Sorry, something went wrong. Please reload the page.", str(e))
+            return JsonResponse(get_error_response_data(errors, submission_id), status=400)
 
-        submission = EditSubmission.objects.get(pk=submission_id)
+        submission = EditSubmission.objects.filter(pk=submission_id).first()
         if action == "reject":
             if submission:
                 submission.delete()
             # TODO: send email to notify the person
-            return JsonResponse({})
+            return JsonResponse({ "id": submission_id })
 
         # for approve action
         if not submission:
-            errors.add_error(None, "Sorry, the requested entry was not found. Please reload the page.")
-            return JsonResponse(errors, status=400)
+            errors.add_error(None, "Sorry, the requested entry was not found. Please reload the page.", str(e))
+            return JsonResponse(get_error_response_data(errors, submission_id), status=400)
         form = EditForm(request.POST, prefix=submission_id + "new")
         if not form.is_valid():
             return HttpResponse(form.errors.as_json(), content_type="application/json", status=422)
         try:
             apply_submission(submission, form.cleaned_data)
-        except Exception:
-            errors.add_error(None, str(e))
-            return JsonResponse(errors, status=422)
+        except Exception as e:
+            errors.add_error(None, trim_error(str(e)), str(e))
+            return JsonResponse(get_error_response_data(errors, submission_id), status=422)
 
-        return JsonResponse({})
+        return JsonResponse({ "id": submission_id })
     else:
         submissions = EditSubmission.objects.all()
         forms = get_submissions_forms(submissions)
