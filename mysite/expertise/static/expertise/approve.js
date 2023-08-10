@@ -29,7 +29,6 @@ async function submitSubmission(post_data) {
         body: post_data,
     });
     if (response.ok) {
-        console.log("SUCCESS");
         const data = await response.json();
         removeAccordionItem(data.id);
     } else {
