@@ -9,7 +9,8 @@
 
 {% block content %}
 
-<form class="edit container-fluid mb-3">
+{% comment %} autocomplete off because firefox may "wrongly" remember form data after refresh {% endcomment %}
+<form class="edit container-fluid mb-3" autocomplete="off">
     <div class="person-select mb-3">
         <label for="person" class="form-label">Name</label>
         <select id="name" class="form-select" name="person" required autofocus oninvalid="this.setCustomValidity('Please choose a person or enter a new person\'s name.')" oninput="this.setCustomValidity('')">

@@ -342,6 +342,31 @@ def get_person_data(person: Person) -> dict[str, str | Sequence[str]]:
     }
     return data
 
+def add_missing_select_options(form: EditForm) -> None:
+    """
+    creates missing options elements for the select fields. necessary because new select
+    options that are entered in the edit form aren't saved in Neo4j yet. without this
+    the options would not show up in the form.
+    """
+
+    select_field_names = (
+        "interests",
+        "institutes",
+        "faculties",
+        "departments",
+        "advisors",
+        "roles",
+        "offered",
+        "wanted",
+    )
+    for field_name in select_field_names:
+        selected_items: list[str] = form.initial[field_name]
+        choices: list[tuple[str, str]] = form.fields[field_name].choices
+        choices_keys = [x[0] for x in choices]
+        for item in selected_items:
+            if not item in choices_keys:
+                choices.append((item, item))
+
 def get_form_couple_header(new_data: dict[str, str | Sequence[str]], old_data: dict[str, str | Sequence[str]]) -> tuple[str, str]:
     """returns a short description of the form couple that is shown to the user for
     the collapsed accordion item
@@ -381,6 +406,7 @@ def get_submissions_forms(submissions: Sequence[EditSubmission]) -> Sequence[dic
         for field in old_form:
             field.field.disabled = True
         new_form = EditForm(initial=new_data, prefix=str(submission.id) + "new")
+        add_missing_select_options(new_form)
 
         submission_data = {
             "data": list(zip(new_form, old_form)), # order of new, old is important

@@ -725,7 +725,7 @@ class EditSubmissionTestCase(TestCase):
             "email": person.email,
             "offered": [exp1.pk, exp2.pk, "new expertise"],
         }
-        response = self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit-form", post_data)
 
         post_data = {
             "personId": "",
@@ -733,7 +733,7 @@ class EditSubmissionTestCase(TestCase):
             "email": "test@test.de",
             "offered": ["expertise3"],
         }
-        response = self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit-form", post_data)
 
         submissions = EditSubmission.objects.all().order_by("id")
         submissions_data = get_submissions_forms(submissions)
@@ -748,6 +748,24 @@ class EditSubmissionTestCase(TestCase):
         self.assertCountEqual(submission_data1["data"][expertise_field_index][0].value(), [exp1.pk, exp2.pk, "new expertise"])
         submission_data2 = submissions_data[1]
         self.assertCountEqual(submission_data1["data"][faculties_field_index][0].value(), [])
+
+    def test_add_missing_choices(self):
+        person = Person(name="Jake", email="a@a.com").save()
+        exp1 = Expertise(name="expertise").save()
+        post_data = {
+            "personId": person.pk,
+            "name": person.name,
+            "email": person.email,
+            "offered": [exp1.pk, "new expertise1", "new expertise2"],
+        }
+        self.client.post("/expertise/edit-form", post_data)
+
+        response = self.client.get("/expertise/approve")
+        form_data = response.context["forms"][0]
+        field_new_offered = form_data["data"][9][0]
+        choices = field_new_offered.field.choices
+        self.assertEqual(len(choices), 3)
+
 
     # test with too long entity names (max length validation for form)
     # test submission for setting new and existing person's email the same as existing person
