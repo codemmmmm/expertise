@@ -9,7 +9,7 @@ function initMultiSelects() {
         tags: true,
         allowClear: true,
         debug: true,
-        //width: "100%",
+        width: "100%",
     };
 
     $(".form-select:not(.select2-hidden-accessible)").select2(config);
@@ -130,7 +130,7 @@ function initSearch() {
 // TODO: entering a new person with same name as existing entry must be possible
 $("#name").select2({
     tags: true,
-    //width: "100%",
+    width: "100%",
     debug: true,
 });
 
