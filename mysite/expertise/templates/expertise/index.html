@@ -12,9 +12,10 @@
     <form class="home">
         <div class="mb-3">
             <!-- maybe give instructions for difference between filter and search -->
-            <h3>
-                <label for="search-filter" class="form-label">Search and filter</label>
+            <h3 class="mb-3">
+                Expertise graph
             </h3>
+            <label for="search-filter" class="form-label visually-hidden">Search and filter</label>
             <select class="form-select search-filter" multiple="multiple" name="filters[]" autofocus>
                 {% for key, item in suggestions.items %}
                 <optgroup class="{{ item.class }}" label="{{ item.group }}">
@@ -30,10 +31,14 @@
                 {% endfor %}
             </select>
         </div>
-        <button type="submit" id="search-button" class="btn btn-primary">Search</button>
-        <div class="mt-3">
-            <div class="alert search-alert py-2 d-none" role="alert">
-                alert text placeholder that you shouldn't see :&#41
+        <div class="mb-3 d-flex">
+            <div class="col">
+                <button type="submit" id="search-button" class="btn btn-primary">Search</button>
+            </div>
+            <div>
+                <div class="alert search-alert py-2 d-none" role="alert">
+                    alert text placeholder that you shouldn't see :&#41
+                </div>
             </div>
         </div>
     </form>
