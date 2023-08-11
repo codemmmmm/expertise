@@ -117,6 +117,10 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     sudo certbot renew --dry-run
     ```
 
+11. Create a superuser `python manage.py createsuperuser`. Log in to the admin page,
+    create a group with permissions for edit submissions and create users for that group
+    so they can approve.
+
 # Limitations
 
 Neo4j Community Edition only supports only one database per server
