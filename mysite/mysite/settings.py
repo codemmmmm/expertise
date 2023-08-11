@@ -56,7 +56,7 @@ ROOT_URLCONF = 'mysite.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'mysite/templates/'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -126,6 +126,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SEND_EXCEPTIONS_TO_CLIENTS = True
 
+LOGIN_URL = '/login'
+LOGIN_REDIRECT_URL = '/expertise/approve'
+
+
+
 # Override production variables if DJANGO_DEVELOPMENT env variable is true
 if os.getenv('DJANGO_DEVELOPMENT') == 'true':
     from mysite.settings_dev import *
+
+# DON'T SET ANYTHING HERE
