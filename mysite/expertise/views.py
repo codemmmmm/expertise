@@ -5,6 +5,7 @@ from django.http import HttpResponse, JsonResponse
 from django.db.models import Q
 from django.db import IntegrityError, DatabaseError
 from django.conf import settings
+from django.contrib.auth.decorators import permission_required
 from neomodel import db, NeomodelException, RelationshipTo
 from django_neomodel import DjangoNode
 
@@ -456,25 +457,16 @@ def apply_submission(submission: EditSubmission, data: dict[str, str | Sequence[
 
     # TODO: log change
 
-def get_nav_active_marker() -> dict:
-    # maybe this should be a constant variable somewhere instead?
-    return {
-        "class": "active",
-        "aria": "aria-current=page",
-    }
-
 # VIEWS BELOW
 
 def index(request):
     context = {
         "suggestions": get_suggestions(),
-        "nav_home": get_nav_active_marker(),
     }
     return render(request, "expertise/index.html", context)
 
 def edit(request):
     context = {
-        "nav_edit": get_nav_active_marker(),
         "persons": Person.nodes.all(),
     }
     # should I instead load the whole form in a single view and just have it hidden until searched?
@@ -543,12 +535,12 @@ def edit_form(request):
         initial_data = get_person_data(person) if person else {}
         form = EditForm(initial=initial_data)
     context = {
-        "nav_edit": get_nav_active_marker(),
         "form": form,
         "person_pk": person.pk if person else "",
     }
     return render(request, "expertise/edit-form.html", context)
 
+@permission_required("expertise.change_editsubmission")
 def approve(request):
     if request.method == "POST":
         action = request.POST.get("action")
@@ -584,7 +576,6 @@ def approve(request):
         forms = get_submissions_forms(submissions)
 
         context = {
-            "nav_approve": get_nav_active_marker(),
             "forms": forms,
         }
         return render(request, "expertise/approve.html", context)
