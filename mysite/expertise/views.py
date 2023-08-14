@@ -524,7 +524,7 @@ def edit_form(request):
                 errors.add_error("email", "This email is already in use", str(e))
             else:
                 errors.add_error(None, trim_error(str(e)), str(e))
-        except DatabaseError:
+        except DatabaseError as e:
             errors.add_error(None, trim_error(str(e)), str(e))
         if errors:
             return JsonResponse(errors, status=422)
@@ -547,7 +547,7 @@ def approve(request):
         submission_id = request.POST.get("submissionId")
         errors = ErrorDict()
         if not action or not submission_id or action not in ("approve", "reject"):
-            errors.add_error(None, "Sorry, something went wrong. Please reload the page.", str(e))
+            errors.add_error(None, "Sorry, something went wrong. Please reload the page.")
             return JsonResponse(get_error_response_data(errors, submission_id), status=400)
 
         submission = EditSubmission.objects.filter(pk=submission_id).first()
@@ -559,7 +559,7 @@ def approve(request):
 
         # for approve action
         if not submission:
-            errors.add_error(None, "Sorry, the requested entry was not found. Please reload the page.", str(e))
+            errors.add_error(None, "Sorry, the requested entry was not found. Please reload the page.")
             return JsonResponse(get_error_response_data(errors, submission_id), status=400)
         form = EditForm(request.POST, prefix=submission_id + "new")
         if not form.is_valid():
