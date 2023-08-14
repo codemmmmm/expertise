@@ -102,6 +102,7 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     python3 ~/expertise/mysite/manage.py collectstatic
     python3 ~/expertise/mysite/manage.py install_labels
     python3 ~/expertise/mysite/manage.py migrate
+    chmod g+w mysite/db.sqlite3
     ```
 
 9. Convert the CSV data using `python3 ~/expertise/convert/convert.py CSV_FILE`.
