@@ -83,6 +83,7 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     WSGIScriptAlias / /home/USER/expertise/mysite/mysite/wsgi.py
     WSGIPythonHome /home/USER/venv/expertise
     WSGIPythonPath /home/USER/expertise/mysite
+    WSGIApplicationGroup %{GLOBAL}
 
     <Directory /home/USER/expertise/mysite/mysite>
     <Files wsgi.py>
@@ -107,7 +108,7 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
 
 9. Convert the CSV data using `python3 ~/expertise/convert/convert.py CSV_FILE`.
 
-10. HTTPS using certbot
+10. HTTPS using certbot (MAYBE LATER, NOT CURRENTLY)
 
     ```
     sudo apt install snap
@@ -119,8 +120,26 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     ```
 
 11. Create a superuser `python manage.py createsuperuser`. Log in to the admin page,
-    create a group with permissions for edit submissions and create users for that group
-    so they can approve.
+    create a group with permissions for edit submissions. Create users and assign that group so they can approve.
+
+# Updating
+
+1. Stash changes if needed. Then get the changes `git pull`.
+
+2. Set STATIC_ROOT and ALLOWED_HOSTS as seen in installation. Then run
+    ```
+    python3 ~/expertise/mysite/manage.py makemigrations
+    python3 ~/expertise/mysite/manage.py migrate
+    python3 ~/expertise/mysite/manage.py collectstatic
+    sudo systemctl restart apache2
+    ```
+
+# Troubleshoooting
+
+* Make sure the static files were collected after updating them.
+* Make sure the apache user is part of the user's group in whose home directory django is.
+* Make sure `mysite/db.sqlite3` has write permissions for the group.
+
 
 # Limitations
 
