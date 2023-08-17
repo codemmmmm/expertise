@@ -20,7 +20,7 @@
                 {% endif %}
             </button>
         </h2>
-        <div id="collapse{{ form_couple.id }}" class="accordion-collapse collapse {% if forloop.first %} show {% endif %} container-fluid gx-sm-2 gx-xl-3" aria-labelledby="heading{{ form_couple.id }}" data-bs-parent="#approvalAccordion">
+        <div id="collapse{{ form_couple.id }}" class="accordion-collapse collapse container-fluid gx-sm-2 gx-xl-3" aria-labelledby="heading{{ form_couple.id }}" data-bs-parent="#approvalAccordion">
             {% comment %} autocomplete off because firefox may "wrongly" remember form data after refresh {% endcomment %}
             <form class="pb-3 mt-3 approve" autocomplete="off">
                 {% csrf_token %}
