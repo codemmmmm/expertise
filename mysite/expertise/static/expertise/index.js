@@ -276,6 +276,7 @@ function setGraphEvents(graph, container, useCanvas, height) {
     });
     graph.on("node:click", nodeToggleFilter);
     graph.on("node:click", changeGraphData);
+    graph.on("node:touchstart", changeGraphData);
     if (useCanvas) {
         graph.on("node:dragstart", function (e) {
             graph.layout();
