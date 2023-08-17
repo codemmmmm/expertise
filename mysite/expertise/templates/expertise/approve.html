@@ -43,12 +43,11 @@
             </form>
         </div>
     </div>
-    {% empty %} {% comment %} this alert will be a child of the accordion but that doesn't matter much {% endcomment %}
-    <div class="container-fluid">
-        <div class="alert alert-success d-inline-block" role="alert">
-            No submissions have to be approved.
-        </div>
-    </div>
     {% endfor %}
+</div>
+<div class="container-fluid">
+    <div class="alert alert-success d-inline-block no-todo d-none" role="alert">
+        No submissions have to be approved.
+    </div>
 </div>
 {% endblock %}

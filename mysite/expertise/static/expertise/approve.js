@@ -31,6 +31,7 @@ async function submitSubmission(post_data) {
     if (response.ok) {
         const data = await response.json();
         removeAccordionItem(data.id);
+        showAlertIfEmpty();
     } else {
         const data = await response.json();
         if (!data.id) {
@@ -68,5 +69,17 @@ function initForms() {
     });
 }
 
+/**
+ * show the alert if no accordion item exists
+ */
+function showAlertIfEmpty() {
+    const submissions = document.querySelectorAll("div.accordion-item");
+    if (submissions.length === 0) {
+        const alert = document.querySelector("div.alert-success.no-todo");
+        alert.classList.remove("d-none");
+    }
+}
+
 initMultiSelects();
 initForms();
+showAlertIfEmpty();
