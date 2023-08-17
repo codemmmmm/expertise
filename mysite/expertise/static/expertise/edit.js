@@ -15,18 +15,36 @@ function initMultiSelects() {
     $(".form-select:not(.select2-hidden-accessible)").select2(config);
 }
 
+function alertAndRedirect(form) {
+    form.onSubmit = (e) => {
+        e.preventDefault();
+    };
+    const button = form.querySelector("button[type='submit']");
+    button.disabled = true;
+    const container = document.createElement("div");
+    const alert = document.createElement("div");
+    alert.className = "alert alert-success mt-3 d-inline-block";
+    alert.role = "alert";
+    alert.textContent = "Your changes were submitted. Redirecting...";
+    container.appendChild(alert);
+    form.appendChild(container);
+    container.scrollIntoView();
+    setTimeout(() => {
+        window.location.assign("/expertise/");
+    }, 3000);
+}
+
 async function submitEdit(post_data) {
     const url = "edit-form";
     const response = await fetch(url, {
         method: "POST",
         body: post_data,
     });
+    const form = document.querySelector("form.edit");
     if (response.ok) {
-        // TODO: first say: edit was submitted and is waiting for acceptance
-        window.location.assign("/expertise/");
+        alertAndRedirect(form);
     } else {
         const errors = await response.json();
-        const form = document.querySelector("form.edit");
         showAndLogFormErrors(form, errors);
         const firstError = document.querySelector("div.invalid-feedback");
         if (firstError) {
