@@ -1,7 +1,9 @@
 import os
 import sys
 from typing import Sequence
+
 from django.test import TestCase
+from django.contrib.auth.models import User, Group, Permission
 from neomodel import config, db, clear_neo4j_database, install_all_labels, DoesNotExist
 
 from expertise.models import (
@@ -26,6 +28,16 @@ test_url = "/".join(split_url)
 db.set_connection(test_url)
 with open(os.devnull, "w") as f:
     install_all_labels(f)
+
+def create_group_and_user(test_case: TestCase) -> None:
+    """creates a group and user for edit submissions, user is not added to the group yet"""
+    test_case.group = Group(name="edit_submissions")
+    test_case.group.save()
+    permission = Permission.objects.get(codename="change_editsubmission")
+    test_case.group.permissions.add(permission)
+    # the password of course can't be retrieved from a saved user
+    test_case.password = "test"
+    test_case.user = User.objects.create_user(username="test", password=test_case.password)
 
 class IndexViewTestCase(TestCase):
     def setUp(self):
@@ -194,6 +206,7 @@ def get_post_data(submission: EditSubmission, action) -> dict[str, str | Sequenc
 
 class EditTestCase(TestCase):
     def setUp(self):
+        create_group_and_user(self)
         clear_neo4j_database(db)
 
     def test_initial_form_values(self):
@@ -257,6 +270,8 @@ class EditTestCase(TestCase):
         self.assertFalse(form.errors)
 
     def test_form_no_relation_changes(self):
+        self.user.groups.add(self.group)
+        self.client.login(username=self.user.username, password=self.password)
         # nodes
         person1 = Person(name="Jake", email="a@a.com", title="title").save()
         person2 = Person(name="Person").save()
@@ -291,6 +306,8 @@ class EditTestCase(TestCase):
 
     def test_form_changed_relations(self):
         """test disconnecting an assigned node, adding an existing node, adding a new node"""
+        self.user.groups.add(self.group)
+        self.client.login(username=self.user.username, password=self.password)
         # nodes
         person = Person(name="Jake", email="a@a.com", title="title").save()
         offered_exp = Expertise(name="offered exp").save()
@@ -332,6 +349,8 @@ class EditTestCase(TestCase):
         self.assertIn(new_expertise.pk, expertise_options)
 
     def test_new_person(self):
+        self.user.groups.add(self.group)
+        self.client.login(username=self.user.username, password=self.password)
         post_data = {
             "personId": "",
             "name": "new person",
@@ -372,6 +391,8 @@ class EditTestCase(TestCase):
 
     def test_entity_name_restrictions(self):
         # TODO: extend tests if more restrictions are introduced
+        self.user.groups.add(self.group)
+        self.client.login(username=self.user.username, password=self.password)
         person = Person(name="Jake", email="a@a.com", title="title").save()
         post_data = {
             "personId": person.pk,
@@ -399,6 +420,8 @@ class EditTestCase(TestCase):
         self.assertEqual(len(response.json()), 2)
 
     def test_new_person_rejected(self):
+        self.user.groups.add(self.group)
+        self.client.login(username=self.user.username, password=self.password)
         post_data = {
             "personId": "",
             "name": "new person",
@@ -427,6 +450,8 @@ class EditTestCase(TestCase):
         self.assertEqual(Person.nodes.all()[0].email, "b@b.com")
 
     def test_duplicate_entity_name(self):
+        self.user.groups.add(self.group)
+        self.client.login(username=self.user.username, password=self.password)
         interest = ResearchInterest(name="new interest").save()
         institute = Institute(name="new institute").save()
         post_data = {
@@ -448,6 +473,7 @@ class EditTestCase(TestCase):
 
 class EditSubmissionTestCase(TestCase):
     def setUp(self):
+        create_group_and_user(self)
         clear_neo4j_database(db)
 
     def test_value_comparison(self):
@@ -750,6 +776,8 @@ class EditSubmissionTestCase(TestCase):
         self.assertCountEqual(submission_data1["data"][faculties_field_index][0].value(), [])
 
     def test_add_missing_choices(self):
+        self.user.groups.add(self.group)
+        self.client.login(username=self.user.username, password=self.password)
         person = Person(name="Jake", email="a@a.com").save()
         exp1 = Expertise(name="expertise").save()
         post_data = {
@@ -765,6 +793,17 @@ class EditSubmissionTestCase(TestCase):
         field_new_offered = form_data["data"][9][0]
         choices = field_new_offered.field.choices
         self.assertEqual(len(choices), 3)
+
+    def test_permission_required(self):
+        post_data = {
+            "personId": "",
+            "name": "Jane",
+            "email": "j@j.j",
+        }
+        response = self.client.post("/expertise/approve", post_data)
+        self.assertRedirects(response, "/login/?next=/expertise/approve")
+        pass
+
 
 
     # test with too long entity names (max length validation for form)

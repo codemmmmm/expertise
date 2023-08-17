@@ -126,7 +126,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SEND_EXCEPTIONS_TO_CLIENTS = True
 
-LOGIN_URL = '/login'
+# without the slash at the end it will cause an extra 302 redirect
+LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/expertise/approve'
 
 
