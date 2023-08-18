@@ -2,6 +2,15 @@
 
 Website for visualizing expertise after converting the data
 
+# Manual
+
+## Search and filter
+
+## Graph
+
+* `Click` a node to load the graph for that node
+* `Click` + `Shift` to toggle the filter for that node
+
 # Installation
 
 for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /home/$USER/

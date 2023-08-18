@@ -245,11 +245,20 @@ function drawG6Graph(apiData, personId, containerId, container){
     graphGlobal = graph;
 }
 
+function handleNodeClick(e) {
+    if (e.originalEvent.shiftKey) {
+        nodeToggleFilter(e);
+    } else {
+        changeGraphData(e);
+    }
+}
+
 function setGraphEvents(graph, container, useCanvas, height) {
     graph.on("beforerender", () => {
         // turn animation off, else afterrender event and resizing of the nodes happens late
         graph.updateLayout({ animate: false });
     });
+
     graph.on("afterrender", async () => {
         if (!useCanvas) {
             // the svg needs to be visible for getting the element sizes if svg used
@@ -274,9 +283,10 @@ function setGraphEvents(graph, container, useCanvas, height) {
         // animation for dragging nodes
         graph.updateLayout({ animate: true });
     });
-    graph.on("node:click", nodeToggleFilter);
-    graph.on("node:click", changeGraphData);
+
+    graph.on("node:click", handleNodeClick);
     graph.on("node:touchstart", changeGraphData);
+
     if (useCanvas) {
         graph.on("node:dragstart", function (e) {
             graph.layout();
@@ -291,6 +301,7 @@ function setGraphEvents(graph, container, useCanvas, height) {
             e.item.get("model").fy = null;
         });
     }
+
     const modalEl = document.getElementById("graphModal");
     modalEl.addEventListener("shown.bs.modal", () => {
         // needs to be called after modal is shown, else container width = 0
