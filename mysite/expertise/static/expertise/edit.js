@@ -85,7 +85,14 @@ function copyToClipboard(e) {
     const endImage = button.querySelector("svg.bi-clipboard2-check");
 
     // does the site always have permission to write to clipboard in a secure context?
-    navigator.clipboard.writeText(input.value);
+    if (window.isSecureContext) {
+        navigator.clipboard.writeText(input.value);
+    } else {
+        console.warn(
+            "Writing to the clipboard failed because it isn't run in a secure context " +
+            "https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts."
+        );
+    }
     button.dataset.inStartState = false;
     button.title = endTitle;
     startImage.classList.add("d-none");
