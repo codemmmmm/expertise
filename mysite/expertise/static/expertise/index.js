@@ -1,6 +1,119 @@
 /*global G6, bootstrap*/
 "use strict";
 
+function initializeClipboardButtons() {
+    const formButton = document.querySelector("button.clipboard-button.filters");
+    formButton.addEventListener("click", copyShareLink);
+    const graphButton = document.querySelector("button.clipboard-button.filters-graph");
+    graphButton.addEventListener("click", copyShareLink);
+}
+
+function copyShareLink(e) {
+    const shareGraph = e.currentTarget.classList.contains("filters-graph");
+    getShareUrl(shareGraph)
+        .then((data) => {
+            console.log(data);
+            navigator.clipboard.writeText(data);
+        })
+        .catch((error) => {
+            console.error("Failed to get the share URL! " + error);
+        });
+}
+
+/**
+ * @param {Boolean} shareGraph
+ * @returns {String}
+ */
+async function getShareUrl(shareGraph) {
+    const url = new URL(document.URL);
+    const shareParams = getShareParametersFromSelection(shareGraph);
+    const shortenedParams = await fetchShortenedParams(shareParams.toString());
+    // sets the search parameter while keeping other parameters
+    const params = url.searchParams;
+    params.set("share", shortenedParams);
+    url.search = params.toString();
+    return url.toString();
+}
+
+/**
+ * @param {Boolean} shareGraph
+ * @returns {URLSeachParams}
+ */
+function getShareParametersFromSelection(shareGraph) {
+    const params = new URLSearchParams();
+
+    const selections = $(".search-filter").select2("data");
+    const filters = selections.filter((element) => element.newTag === undefined);
+    filters.forEach((filter) => {
+        // don't discard the id prefix because it is needed for selecting the right
+        // elements when loading the shared state
+        params.append("filter", filter.id);
+    });
+
+    const searchWord = selections.find((element) => element.newTag === true);
+    if (searchWord) {
+        params.append("search", searchWord.text);
+    }
+
+    if (shareGraph) {
+        const personId = document.querySelector("#graph-container").dataset.personId;
+        params.append("graph-person", personId);
+    }
+    console.log(params);
+    return params;
+}
+
+/**
+ * save a short representation of longValue to the database and return that
+ * @param {String} longValue
+ * @returns {Promise.<String>}
+ */
+function fetchShortenedParams(longValue) {
+    // TODO: it should return the shortened string from the database
+    //const response = fetch("abc");
+    //return response;
+    return Promise.resolve(longValue);
+}
+
+/**
+ * retrieve the original value represented by shortValue from the database
+ * @param {String} shortValue
+ * @returns {Promise.<String>}
+ */
+function fetchInflatedParams(shortValue) {
+    // TODO: fetch instead of just mocking it up
+    return Promise.resolve(shortValue);
+}
+
+function loadSharedView() {
+    const url = new URL(document.URL);
+    const params = new URLSearchParams(url.search);
+    const shortenedShareParams = params.get("share");
+    if (!shortenedShareParams) {
+        return;
+    }
+
+    fetchInflatedParams(shortenedShareParams)
+        .then((shortenedShareParams) => {
+            const shareParams = new URLSearchParams(shortenedShareParams);
+            const filters = shareParams.getAll("filter");
+            const selectEl = $(".search-filter");
+            selectEl.val(filters);
+            selectEl.trigger("change");
+            const searchEl = document.querySelector("#search-button");
+            searchEl.click();
+
+            const personId = shareParams.get("graph-person");
+            if (personId) {
+                makeGraph(personId);
+            }
+            console.log(shortenedShareParams);
+        })
+        .catch((error) => {
+            console.error("Unable to load shared view! " + error);
+        });
+}
+
 function showSearchLoading(button) {
     button.innerHTML = "<span class=\"spinner-border spinner-border-sm me-1\" role=\"status\" aria-hidden=\"true\"></span>Searching...";
 }
@@ -188,7 +301,7 @@ function prepareGraphData(apiData) {
  * @param {*} containerWidth
  * @returns {string} name of the person that the graph is about
  */
-function drawG6Graph(apiData, personId, containerId, container){
+function drawG6Graph(apiData, containerId, container){
     const data = prepareGraphData(apiData);
     // change this value instead of directly editing renderer and fitView properties
     const useCanvas = true;
@@ -357,6 +470,7 @@ function nodeToggleFilter(e) {
 function changeGraphData(e) {
     const graph = graphGlobal;
     const id = e.item.get("id");
+    setGraphId(id);
     getGraph(id)
         .then((data) => {
             data = prepareGraphData(data.graph);
@@ -369,7 +483,7 @@ function changeGraphData(e) {
         });
 }
 
-function showGraph(data, personId) {
+function showGraph(data) {
     const containerId = "graph-container";
     const container = document.querySelector("#" + containerId);
     if (!data.nodes.length) {
@@ -377,7 +491,7 @@ function showGraph(data, personId) {
         container.textContent = "No nodes found.";
         return;
     }
-    drawG6Graph(data, personId, containerId, container);
+    drawG6Graph(data, containerId, container);
     // select the svg or canvas element
     const networkEl = document.querySelector("#" + containerId + " > *");
     networkEl.classList.add("border", "border-info", "rounded", "rounded-1", "d-none");
@@ -394,7 +508,14 @@ async function getGraph(nodeId) {
     return await response.json();
 }
 
-function makeGraph(e) {
+function setGraphId(id) {
+    document.querySelector("#graph-container").dataset.personId = id;
+}
+
+/**
+ * if the graph was triggered from a button and not programmatically (share link)
+ */
+function makeGraphWrapper(e) {
     // don't execute the callback when the email link is clicked
     if (e.target.nodeName === "A") {
         return;
@@ -402,11 +523,16 @@ function makeGraph(e) {
 
     // for setting focus after modal close
     e.currentTarget.dataset.lastSelected = true;
-    makeModal();
     const personId = e.currentTarget.dataset.pk;
+    makeGraph(personId);
+}
+
+function makeGraph(personId) {
+    makeModal();
+    setGraphId(personId);
     getGraph(personId)
         .then((data) => {
-            showGraph(data.graph, personId);
+            showGraph(data.graph);
         })
         .catch((error) => {
             hideModalSpinner();
@@ -601,7 +727,7 @@ function fillTable(persons) {
     persons.forEach((p) => {
         const tr = document.createElement("tr");
         tr.dataset.pk = p.person.pk;
-        emulateButton(tr, makeGraph);
+        emulateButton(tr, makeGraphWrapper);
 
         const personEl = document.createElement("td");
         const personText = concatTitleName(p.person.title, p.person.name);
@@ -812,6 +938,8 @@ initializeSelect2();
 initializeTableBody();
 initializeSearch();
 initializeModal();
+initializeClipboardButtons();
+loadSharedView();
 
 // after refreshing the page the user should have to search again
 // if I don't clear the storage it would show the results of the
