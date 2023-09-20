@@ -9,14 +9,15 @@ function initializeClipboardButtons() {
 }
 
 function copyShareLink(e) {
+    // TODO: "animate" the clipboard image
     const shareGraph = e.currentTarget.classList.contains("filters-graph");
     getShareUrl(shareGraph)
         .then((data) => {
-            console.log(data);
             navigator.clipboard.writeText(data);
         })
         .catch((error) => {
-            console.error("Failed to get the share URL! " + error);
+            // TODO: what to do if error?
+            console.error(error);
         });
 }
 
@@ -27,10 +28,21 @@ function copyShareLink(e) {
 async function getShareUrl(shareGraph) {
     const url = new URL(document.URL);
     const shareParams = getShareParametersFromSelection(shareGraph);
-    const shortenedParams = await fetchShortenedParams(shareParams.toString());
+    // return the URL with the query arguments removed
+    if (shareParams.size === 0) {
+        return url.href.split("?")[0];
+    }
+
+    let shortenedParams = "";
+    try {
+        const data = await fetchShortenedParams(shareParams.toString());
+        shortenedParams = data.value;
+    } catch (error) {
+        console.error("Failed to compress the parameters: " + error);
+    }
     // sets the search parameter while keeping other parameters
     const params = url.searchParams;
-    params.set("share", shortenedParams);
+    params.set("share", String(shortenedParams));
     url.search = params.toString();
     return url.toString();
 }
@@ -44,11 +56,13 @@ function getShareParametersFromSelection(shareGraph) {
 
     const selections = $(".search-filter").select2("data");
     const filters = selections.filter((element) => element.newTag === undefined);
-    filters.forEach((filter) => {
-        // don't discard the id prefix because it is needed for selecting the right
-        // elements when loading the shared state
-        params.append("filter", filter.id);
-    });
+    if (filters.length) {
+        filters.forEach((filter) => {
+            // don't discard the id prefix because it is needed for selecting the right
+            // elements when loading the shared state
+            params.append("filter", filter.id);
+        });
+    }
 
     const searchWord = selections.find((element) => element.newTag === true);
     if (searchWord) {
@@ -57,61 +71,77 @@ function getShareParametersFromSelection(shareGraph) {
 
     if (shareGraph) {
         const personId = document.querySelector("#graph-container").dataset.personId;
-        params.append("graph-person", personId);
+        params.append("graph-node", personId);
     }
-    console.log(params);
     return params;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 /**
  * save a short representation of longValue to the database and return that
  * @param {String} longValue
- * @returns {Promise.<String>}
+ * @returns {Promise.<Object>}
  */
-function fetchShortenedParams(longValue) {
-    // TODO: it should return the shortened string from the database
-    //const response = fetch("abc");
-    //return response;
-    return Promise.resolve(longValue);
+async function fetchShortenedParams(longValue) {
+    const CsrfToken = getCookie("csrftoken");
+    const response = await fetch("shorten", {
+        method: "POST",
+        headers: { "X-CSRFToken": CsrfToken },
+        mode: "same-origin",
+        body: JSON.stringify({ parameters: longValue }),
+    });
+    if (!response.ok) {
+        throw new Error("Request failed");
+    }
+    return response.json();
 }
 
 /**
- * retrieve the original value represented by shortValue from the database
- * @param {String} shortValue
- * @returns {Promise.<String>}
+ * get the data for a shared view from the HTML element, populate the table and input,
+ * trigger the graph
  */
-function fetchInflatedParams(shortValue) {
-    // TODO: fetch instead of just mocking it up
-    return Promise.resolve(shortValue);
-}
-
-function loadSharedView() {
-    const url = new URL(document.URL);
-    const params = new URLSearchParams(url.search);
-    const shortenedShareParams = params.get("share");
-    if (!shortenedShareParams) {
-        return;
+function loadSharedViewFromHtml() {
+    const dataEl = document.querySelector("#share-data");
+    const tableData = dataEl.dataset.table;
+    if (tableData !== "[]") {
+        sessionStorage.setItem("personData", tableData);
+        const persons = getStoredPersonData();
+        updateTable(persons);
+        document.querySelector(".persons-table-container").classList.remove("d-none");
     }
 
-    fetchInflatedParams(shortenedShareParams)
-        .then((shortenedShareParams) => {
-            const shareParams = new URLSearchParams(shortenedShareParams);
-            const filters = shareParams.getAll("filter");
-            const selectEl = $(".search-filter");
-            selectEl.val(filters);
-            selectEl.trigger("change");
-            const searchEl = document.querySelector("#search-button");
-            searchEl.click();
+    const searchWord = dataEl.dataset.search;
+    if (searchWord) {
+        // this option is not deleted automatically when it is unselected, unlike tags
+        // created by a user
+        const newOption = new Option(searchWord, searchWord, false, true);
+        $(".search-filter").append(newOption).trigger("change");
+        // retrieve the new selection to add the property that I use to distinguish
+        // existing and user-created options
+        const selections = $(".search-filter").select2("data");
+        const newSelection = selections.find((element) => element.id === searchWord);
+        newSelection.newTag = true;
+    }
 
-            const personId = shareParams.get("graph-person");
-            if (personId) {
-                makeGraph(personId);
-            }
-            console.log(shortenedShareParams);
-        })
-        .catch((error) => {
-            console.error("Unable to load shared view! " + error);
-        });
+    const nodeId = dataEl.dataset.graph;
+    if (nodeId) {
+        makeGraph(nodeId);
+    }
 }
 
 function showSearchLoading(button) {
@@ -147,13 +177,13 @@ function search(e) {
         if (data === undefined) {
             // set the sessionStorage to empty array to prevent other actions
             // possibly using outdated search results
-            sessionStorage.setItem("persons", JSON.stringify([]));
+            sessionStorage.setItem("personData", JSON.stringify([]));
             updateAlert(null);
             hideSearchLoading(e.target);
             return;
         }
         const persons = data.persons;
-        sessionStorage.setItem("persons", JSON.stringify(persons));
+        sessionStorage.setItem("personData", JSON.stringify(persons));
         hideSearchLoading(e.target);
         updateTable(persons);
         document.querySelector(".persons-table-container").classList.remove("d-none");
@@ -505,7 +535,7 @@ async function getGraph(nodeId) {
     if (!response.ok) {
         throw new Error("Request failed");
     }
-    return await response.json();
+    return response.json();
 }
 
 function setGraphId(id) {
@@ -908,6 +938,10 @@ function createTag(params) {
     };
 }
 
+function getStoredPersonData() {
+    return JSON.parse(sessionStorage.getItem("personData")) ?? [];
+}
+
 function initializeSelect2() {
     const $searchFilter = $(".search-filter").select2({
         placeholder: "Select filters or enter search parameter",
@@ -922,7 +956,7 @@ function initializeSelect2() {
         width: "100%",
     });
     $searchFilter.on("change", function () {
-        const persons = JSON.parse(sessionStorage.getItem("persons")) ?? [];
+        const persons = getStoredPersonData();
         updateTable(persons);
     });
     // prevents opening the dropdown after unselecting an item
@@ -934,16 +968,16 @@ function initializeSelect2() {
     });
 }
 
+// after refreshing the page the user should have to search again
+// if I don't clear the storage it would show the results of the
+// previous search as soon as a search word or filter is entered
+sessionStorage.removeItem("personData");
+
 initializeSelect2();
 initializeTableBody();
 initializeSearch();
 initializeModal();
 initializeClipboardButtons();
-loadSharedView();
-
-// after refreshing the page the user should have to search again
-// if I don't clear the storage it would show the results of the
-// previous search as soon as a search word or filter is entered
-sessionStorage.removeItem("persons");
+loadSharedViewFromHtml();
 
 var graphGlobal = null;

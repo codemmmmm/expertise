@@ -811,4 +811,67 @@ class EditSubmissionTestCase(TestCase):
 
     # test graph api for two connections between two nodes, e.g. person A -> expertise 1 twice (wanted/offered)
 
+class ShortenLinkTestCase(TestCase):
+    def setUp(self):
+        clear_neo4j_database(db)
 
+    def test_shorten_update(self):
+        post_data = {
+            "parameters": "filter=abc123&filter=def123&search=python&graph-node=123abc",
+        }
+        self.client.post("/expertise/shorten", post_data, content_type="application/json")
+        old_last_used = ShareParameters.objects.first().last_used
+
+        response = self.client.post("/expertise/shorten", post_data, content_type="application/json")
+        self.assertTrue(old_last_used < ShareParameters.objects.first().last_used)
+        self.assertEqual(1, response.json()["value"])
+
+    def test_shorten_empty(self):
+        post_data = {
+            "parameters": "",
+        }
+        response = self.client.post("/expertise/shorten", post_data, content_type="application/json")
+        self.assertEqual(400, response.status_code)
+
+        post_data = {}
+        response = self.client.post("/expertise/shorten", post_data, content_type="application/json")
+        self.assertEqual(400, response.status_code)
+
+    def test_inflate(self):
+        # add data to ShareParameters model
+        post_data = {
+            "parameters": "filter=abc123&filter=def123&search=facult&graph-node=123abc",
+        }
+        self.client.post("/expertise/shorten", post_data, content_type="application/json")
+
+        # add data to Neo4j that fits the search word
+        person = Person(title="Prof", name="Adviso", comment="I am hiring").save()
+        interest = ResearchInterest(name="interest").save()
+        fac = Faculty(name="faculty").save()
+        wanted_exp = Expertise(name="wanted E").save()
+        person.interests.connect(interest)
+        person.faculties.connect(fac)
+        person.wanted_expertise.connect(wanted_exp)
+
+        shared_params = QueryDict(ShareParameters.objects.first().parameters)
+        response = self.client.get("/expertise/?share=1")
+        self.assertEqual(response.context["selected_options"], shared_params.getlist("filter"))
+        table_data = get_filtered_data(shared_params.get("search"))
+        actual_table_data = json.loads(response.context["table_data"])
+        self.assertEqual(actual_table_data, table_data)
+        self.assertEqual(response.context["search"], shared_params.get("search"))
+
+    def test_inflate_empty(self):
+        # add data to Neo4j
+        person = Person(title="Prof", name="Adviso", comment="I am hiring").save()
+        interest = ResearchInterest(name="interest").save()
+        fac = Faculty(name="faculty").save()
+        wanted_exp = Expertise(name="wanted E").save()
+        person.interests.connect(interest)
+        person.faculties.connect(fac)
+        person.wanted_expertise.connect(wanted_exp)
+
+        response = self.client.get("/expertise/?share=1")
+        self.assertEqual(response.context["selected_options"], [])
+        self.assertEqual(response.context["table_data"], json.dumps([]))
+        self.assertEqual(response.context["search"], "")

@@ -1,11 +1,13 @@
 from typing import Any, Sequence
+import json
 
 from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, QueryDict
 from django.db.models import Q
 from django.db import IntegrityError, DatabaseError
 from django.conf import settings
 from django.contrib.auth.decorators import permission_required
+from django.core.serializers.json import DjangoJSONEncoder
 from neomodel import db, NeomodelException, RelationshipTo
 from django_neomodel import DjangoNode
 
@@ -18,6 +20,7 @@ from expertise.models import (
     Role,
     Expertise,
     EditSubmission,
+    ShareParameters,
 )
 
 from expertise.forms import EditForm
@@ -135,6 +138,7 @@ def get_all_person_data(persons: list) -> list[dict]:
     return entries
 
 def get_filtered_data(search_param: str) -> list[dict]:
+    search_param = search_param.lower()
     if search_param == "":
         matching_persons = Person.nodes.all()
     else:
@@ -457,11 +461,41 @@ def apply_submission(submission: EditSubmission, data: dict[str, str | Sequence[
 
     # TODO: log change
 
+def get_share_params(share_id: str | None) -> ShareParameters | None:
+    if not share_id:
+        return None
+    try:
+        return ShareParameters.objects.get(pk=share_id)
+    except ShareParameters.DoesNotExist:
+        return None
+
 # VIEWS BELOW
 
 def index(request):
+    # TODO: use better names for the share_params variable(s)
+    share_id = request.GET.get("share")
+    share_params = get_share_params(share_id)
+    selected_options = []
+    persons_data = []
+    search_word = ""
+    graph_node_id = ""
+    if share_params:
+        share_params = QueryDict(share_params.parameters)
+        filters = share_params.getlist("filter")
+        if filters:
+            selected_options = filters
+        search_word = share_params.get("search", "")
+        # should the table be filled if only the graph view is shared?
+        persons_data = get_filtered_data(search_word)
+        graph_node_id = share_params.get("graph-node", "")
+
+    # the table data, select2 "tag" and modal with graph need to be initialized on front end
     context = {
         "suggestions": get_suggestions(),
+        "selected_options": selected_options,
+        "table_data": json.dumps(persons_data, cls=DjangoJSONEncoder),
+        "search": search_word,
+        "graph_node": graph_node_id,
     }
     return render(request, "expertise/index.html", context)
 
@@ -587,7 +621,7 @@ def persons_api(request):
         return JsonResponse(data)
 
     search_param = request.GET.get("search")
-    persons_data = get_filtered_data(search_param.lower())
+    persons_data = get_filtered_data(search_param)
     data["persons"] = persons_data
     return JsonResponse(data)
 
@@ -601,3 +635,27 @@ def graph_api(request):
     # do I need to give a proper error for the case that a node with the given key doesn't exist?
     data["graph"] = get_graph_data(node_id)
     return JsonResponse(data)
+
+def shorten(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        parameters = data.get("parameters")
+        # TODO: and len(parameters) <= ShareParameters.parameters.field.max_length ?
+        if parameters:
+            shortened, was_created = ShareParameters.objects.get_or_create(parameters=parameters)
+            if not was_created:
+                # trigger automatic update of last_used value
+                shortened.save()
+
+            value = { "value": shortened.id }
+            return JsonResponse(value)
+        else:
+            error_message = "The request didn't contain a value"
+
+        error = { "error": error_message }
+        return JsonResponse(error, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+

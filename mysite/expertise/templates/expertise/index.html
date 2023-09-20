@@ -8,6 +8,7 @@
 {% block title %}Expertise overview{% endblock %}
 
 {% block content %}
+{% load expertise_extras %}
 <div class="d-flex justify-content-center">
     <form class="home">
         <div class="mb-3">
@@ -43,7 +44,8 @@
                         in the database
                     {% endcomment %}
                     {% for suggestion in item.options %}
-                    <option class="{{ item.class }}" value="{{ key|slice:":4" }}-{{ suggestion.pk }}">{{ suggestion.name }}</option>
+                    {% formatted_node_pk key suggestion.pk as id %}
+                    <option class="{{ item.class }}" value="{{ id }}" {% if id in selected_options %}selected {% endif %}>{{ suggestion.name }}</option>
                     {% endfor %}
                 </optgroup>
                 {% endfor %}
@@ -89,6 +91,7 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=1069739#c24
         <tbody>
         </tbody>
     </table>
+    <div id="share-data" class="d-none" data-table="{{ table_data }}" data-search="{{ search }}" data-graph="{{ graph_node }}"></div>
 </div>
 
 <div class="modal fade" id="graphModal" tabindex="-1" aria-labelledby="graphModalLabel" aria-hidden="true">
