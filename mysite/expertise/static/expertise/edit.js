@@ -1,6 +1,6 @@
 "use strict";
 
-import { showAndLogFormErrors, hideFormErrors, showErrorAlert, hideErrorAlert } from "./utils.js";
+import { showAndLogFormErrors, hideFormErrors, showErrorAlert, hideErrorAlert, writeToClipboard } from "./utils.js";
 
 function initMultiSelects() {
     const config = {
@@ -73,29 +73,12 @@ function initEdit() {
     form.addEventListener("submit", edit);
 }
 
-function copyToClipboard(e) {
+function copyPersonId(e) {
     const button = e.currentTarget;
-    if (button.dataset.inStartState === "false") {
-        return false;
-    }
-    const input = document.querySelector("input[name='personId']");
-    const startTitle = button.title;
-    const endTitle = "Copied!";
-    const startImage = button.querySelector("svg.bi-clipboard2");
-    const endImage = button.querySelector("svg.bi-clipboard2-check");
-
-    // does the site always have permission to write to clipboard in a secure context?
-    navigator.clipboard.writeText(input.value);
-    button.dataset.inStartState = false;
-    button.title = endTitle;
-    startImage.classList.add("d-none");
-    endImage.classList.remove("d-none");
-    setTimeout(() => {
-        button.title = startTitle;
-        startImage.classList.remove("d-none");
-        endImage.classList.add("d-none");
-        button.dataset.inStartState = true;
-    }, 2000);
+    writeToClipboard(button, async () => {
+        const input = document.querySelector("input[name='personId']");
+        return Promise(input.value);
+    });
 }
 
 function initCopyButton() {
@@ -104,7 +87,7 @@ function initCopyButton() {
     // move it to the intended position because the full form was loaded
     nameContainer.querySelector("label").insertAdjacentElement("afterend", clipboardEl);
     clipboardEl.classList.remove("d-none");
-    clipboardEl.addEventListener("click", copyToClipboard);
+    clipboardEl.addEventListener("click", copyPersonId);
 }
 
 async function loadFullForm(selectedPerson) {

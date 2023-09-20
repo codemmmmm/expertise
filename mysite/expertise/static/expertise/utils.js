@@ -1,6 +1,6 @@
 "use strict";
 
-export { showAndLogFormErrors, hideFormErrors, showErrorAlert, hideErrorAlert };
+export { showAndLogFormErrors, hideFormErrors, showErrorAlert, hideErrorAlert, writeToClipboard };
 
 /**
  *
@@ -73,4 +73,40 @@ function hideErrorAlert(parent) {
     if (alertContainer) {
         alertContainer.remove();
     }
+}
+
+/**
+ * handles switching the clipboard image and info and writing to the clipboard
+ * @param {HTMLButtonElement} button
+ * @param {Function} getValue has to return a Promise resolving to a string
+ */
+function writeToClipboard(button, getValue) {
+    if (button.dataset.inStartState === "false") {
+        return false;
+    }
+    const startTitle = button.title;
+    const endTitle = "Copied!";
+    const startImage = button.querySelector("svg.bi-clipboard2");
+    const endImage = button.querySelector("svg.bi-clipboard2-check");
+
+    // does the site always have permission to write to clipboard in a secure context?
+    getValue()
+        .then((data) => {
+            navigator.clipboard.writeText(data);
+        })
+        .catch((error) => {
+            navigator.clipboard.writeText("");
+            console.error(error);
+        });
+
+    button.dataset.inStartState = false;
+    button.title = endTitle;
+    startImage.classList.add("d-none");
+    endImage.classList.remove("d-none");
+    setTimeout(() => {
+        button.title = startTitle;
+        startImage.classList.remove("d-none");
+        endImage.classList.add("d-none");
+        button.dataset.inStartState = true;
+    }, 2000);
 }

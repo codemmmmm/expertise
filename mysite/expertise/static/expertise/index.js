@@ -1,6 +1,8 @@
 /*global G6, bootstrap*/
 "use strict";
 
+import { writeToClipboard } from "./utils.js";
+
 function initializeClipboardButtons() {
     const formButton = document.querySelector("button.clipboard-button.filters");
     formButton.addEventListener("click", copyShareLink);
@@ -9,16 +11,11 @@ function initializeClipboardButtons() {
 }
 
 function copyShareLink(e) {
-    // TODO: "animate" the clipboard image
+    const button = e.currentTarget;
     const shareGraph = e.currentTarget.classList.contains("filters-graph");
-    getShareUrl(shareGraph)
-        .then((data) => {
-            navigator.clipboard.writeText(data);
-        })
-        .catch((error) => {
-            // TODO: what to do if error?
-            console.error(error);
-        });
+    writeToClipboard(button, () => {
+        return getShareUrl(shareGraph);
+    });
 }
 
 /**
