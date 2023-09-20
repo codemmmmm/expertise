@@ -111,6 +111,9 @@ def get_suggestions() -> dict:
 def convert_node_list(nodes) -> list[dict[str, DjangoNode]]:
     return [{"name": node.get("name"), "pk": node.get("pk")} for node in nodes]
 
+def get_surname(name: str) -> str:
+    return name.split()[-1]
+
 def get_all_person_data(persons: list) -> list[dict]:
     entries = []
     for person in persons:
@@ -135,6 +138,8 @@ def get_all_person_data(persons: list) -> list[dict]:
             }
             for adv in data["advisors"]]
         entries.append(data)
+
+    entries.sort(key=lambda x: get_surname(x["person"]["name"]))
     return entries
 
 def get_filtered_data(search_param: str) -> list[dict]:
