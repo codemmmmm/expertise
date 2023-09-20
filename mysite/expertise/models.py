@@ -147,3 +147,9 @@ class EditSubmission(models.Model):
     offered_new = models.JSONField(null=False, default=default_list)
     wanted = models.JSONField(null=False, default=default_list)
     wanted_new = models.JSONField(null=False, default=default_list)
+
+# the implicitly created primary key is used as the shortened value
+class ShareParameters(models.Model):
+    parameters = models.CharField(max_length=1000, unique=True)
+    creation_date = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(auto_now=True)
