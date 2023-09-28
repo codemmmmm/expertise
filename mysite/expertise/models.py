@@ -20,6 +20,7 @@ class Institute(DjangoNode):
 
     class Meta:
         app_label = "expertise"
+        verbose_name = "institution"
 
 class Faculty(DjangoNode):
     name = StringProperty(unique_index=True, required=True, max_length=200)
@@ -27,7 +28,8 @@ class Faculty(DjangoNode):
 
     class Meta:
         app_label = "expertise"
-        verbose_name_plural = "faculties"
+        verbose_name = "faculty/center"
+        verbose_name_plural = "faculties/centers"
 
 class Department(DjangoNode):
     name = StringProperty(unique_index=True, required=True, max_length=200)
@@ -35,6 +37,8 @@ class Department(DjangoNode):
 
     class Meta:
         app_label = "expertise"
+        verbose_name = "department/group"
+        verbose_name_plural = "departments/groups"
 
 class Expertise(DjangoNode):
     name = StringProperty(unique_index=True, required=True, max_length=200)

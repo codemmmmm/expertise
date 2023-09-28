@@ -24,6 +24,8 @@ class PersonAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
 class ResearchInterestAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
     list_display = ('name',)
     exclude = ('pk',)
+    ordering = ['name']
+    list_max_show_all = 500
 
 class InstituteAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
     list_display = ('name',)
@@ -44,6 +46,8 @@ class RoleAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
 class ExpertiseAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
     list_display = ('name',)
     exclude = ('pk',)
+    ordering = ['name']
+    list_max_show_all = 500
 
 neo_admin.register(Person, PersonAdmin)
 neo_admin.register(ResearchInterest, ResearchInterestAdmin)
