@@ -54,7 +54,7 @@ table.table.persons-table thead th {
     box-shadow: inset 0 0 0 #000000, inset 0 -2px 0 #222;
 }
 
-td:nth-child(1)>button,
+td:nth-child(2)>button,
 td:nth-child(7)>button,
 .select2-container ul.select2-selection__rendered>li.person,
 strong.select2-results__group.person {
