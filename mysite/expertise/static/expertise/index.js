@@ -95,6 +95,8 @@ function getCookie(name) {
  * @returns {Promise.<Object>}
  */
 async function fetchShortenedParams(longValue) {
+    // I had a bug where the cookie was set twice in firefox and the
+    // wrong cookie was chosen for the request
     const CsrfToken = getCookie("csrftoken");
     const response = await fetch("shorten", {
         method: "POST",
