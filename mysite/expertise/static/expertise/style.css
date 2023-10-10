@@ -6,6 +6,7 @@
     --color-department: #d1c08a;
     --color-role: #f78e4c;
     --color-expertise: #23b660;
+    --color-search: #e4e4e4; /* for the search/history optgroup */
 }
 
 .navbar-dark .navbar-nav .nav-link {
@@ -96,6 +97,10 @@ td:nth-child(10)>button,
 .select2-container ul.select2-selection__rendered>li.expertise,
 strong.select2-results__group.expertise {
     background-color: var(--color-expertise);
+}
+
+strong.select2-results__group.search {
+    background-color: var(--color-search);
 }
 
 /* values copied from select2 option elements */

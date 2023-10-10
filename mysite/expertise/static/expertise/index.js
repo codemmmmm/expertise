@@ -52,7 +52,7 @@ function getShareParametersFromSelection(shareGraph) {
     const params = new URLSearchParams();
 
     const selections = $(".search-filter").select2("data");
-    const filters = selections.filter((element) => element.newTag === undefined);
+    const filters = selections.filter((element) => element.element.dataset.newTag !== "true");
     if (filters.length) {
         filters.forEach((filter) => {
             // don't discard the id prefix because it is needed for selecting the right
@@ -61,9 +61,11 @@ function getShareParametersFromSelection(shareGraph) {
         });
     }
 
-    const searchWord = selections.find((element) => element.newTag === true);
-    if (searchWord) {
-        params.append("search", searchWord.text);
+    const searchPhrases = selections.filter((element) => element.element.dataset.newTag === "true");
+    if (searchPhrases.length) {
+        searchPhrases.forEach((phrase) => {
+            params.append("search", phrase.text);
+        });
     }
 
     if (shareGraph) {
@@ -122,18 +124,9 @@ function loadSharedViewFromHtml() {
         document.querySelector(".persons-table-container").classList.remove("d-none");
     }
 
-    const searchWord = dataEl.dataset.search;
-    if (searchWord) {
-        // this option is not deleted automatically when it is unselected, unlike tags
-        // created by a user
-        const newOption = new Option(searchWord, searchWord, false, true);
-        $(".search-filter").append(newOption).trigger("change");
-        // retrieve the new selection to add the property that I use to distinguish
-        // existing and user-created options
-        const selections = $(".search-filter").select2("data");
-        const newSelection = selections.find((element) => element.id === searchWord);
-        newSelection.newTag = true;
-    }
+    const searchPhrases = JSON.parse(dataEl.dataset.search);
+    searchPhrases.forEach((phrase) => appendSearchPhraseToGroup(phrase));
+    initializeSelect2(false);
 
     const nodeId = dataEl.dataset.graph;
     if (nodeId) {
@@ -149,10 +142,24 @@ function hideSearchLoading(button) {
     button.textContent = "Search";
 }
 
-async function getPersons(searchWord) {
-    const url = "persons";
+/**
+ *
+ * @param {Array.<String>} searchPhrases
+ * @returns
+ */
+async function getPersons(searchPhrases) {
+    const path = "persons";
+    const params = new URLSearchParams();
+    if (searchPhrases.length) {
+        searchPhrases.forEach((phrase) => {
+            params.append("search", phrase);
+        });
+    } else {
+        params.append("search", "");
+    }
+
     try {
-        const response = await fetch(`${url}?search=${encodeURIComponent(searchWord)}`);
+        const response = await fetch(`${path}?${params.toString()}`);
         if (!response.ok) {
             throw new Error("Network response was not OK");
         }
@@ -167,10 +174,10 @@ function search(e) {
     showSearchLoading(e.target);
     // get search parameter
     const selections = $(".search-filter").select2("data");
-    const searchSelection = selections.find((element) => element.newTag === true);
-    const searchWord = searchSelection === undefined ? "" : searchSelection.text;
+    const searchSelections = selections.filter((element) => element.element.dataset.newTag === "true");
+    const searchPhrases = searchSelections.map((phrase) => phrase.text);//searchSelections === undefined ? "" : searchSelections.text;
 
-    getPersons(searchWord).then((data) => {
+    getPersons(searchPhrases).then((data) => {
         if (data === undefined) {
             // set the sessionStorage to empty array to prevent other actions
             // possibly using outdated search results
@@ -527,8 +534,8 @@ function showGraph(data) {
 
 async function getGraph(nodeId) {
     // what happens in case of timeout?
-    const url = "graph";
-    const response = await fetch(`${url}?id=${encodeURIComponent(nodeId)}`);
+    const path = "graph";
+    const response = await fetch(`${path}?id=${encodeURIComponent(nodeId)}`);
     if (!response.ok) {
         throw new Error("Request failed");
     }
@@ -626,7 +633,7 @@ function filter_persons(persons) {
     const selections = $(".search-filter").select2("data");
     // excluding the user created selections here is only necessary
     // because a user might create a tag with e.g. the value "inst-xxx"
-    const filters = selections.filter((element) => element.newTag === undefined);
+    const filters = selections.filter((element) => element.element.dataset.newTag !== "true");
 
     // group the filters by category
     // the id is the key prepended to the suggestions in the Django template
@@ -888,12 +895,86 @@ function initializeModal() {
     modalEl.addEventListener("hidden.bs.modal", setFocus);
 }
 
+/**
+ * add a new option to the select2. the option is not deleted automatically if it is
+ * unselected or not selected
+ * @param {String} text
+ * @param {Boolean} temporary if true, the option is marked for deletion and not selected
+ */
+function appendNewOption(text, temporary) {
+    const id = temporary ? "temp-" + text : text;
+    const newOption = new Option(text, id, false, true);
+    $(".search-filter").append(newOption);
+
+    const selections = $(".search-filter").select2("data");
+    if (temporary) {
+        const valuesForSelectionsWithoutNewOption = selections.filter((element) => element.id !== id)
+            .map((element) => element.id);
+        $(".search-filter").val(valuesForSelectionsWithoutNewOption);
+    }
+    $(".search-filter").trigger("change");
+}
+
+/**
+ * append a new option with the text entered by the user so options with the same text as
+ * an existing option can be selected as search phrase
+ * @param {InputEvent} e
+ * @returns
+ */
+function updateSearchPhrase(e) {
+    const text = e.currentTarget.value.trim();
+    // delete the temporary options except the one created from the current input
+    const options = document.querySelectorAll(".search-filter > option");
+    options.forEach((element) => {
+        if (element.value !== "temp-" + text) {
+            element.remove();
+        }
+    });
+
+    if (text === "") {
+        return;
+    }
+
+    const createdOptions = document.querySelectorAll(".search-filter > option, .search-filter optgroup.search option");
+    const optionExists = Array.from(createdOptions)
+        .map((element) => element.text.toLowerCase())
+        .includes(text.toLowerCase());
+    if (optionExists) {
+        return;
+    }
+
+    appendNewOption(text, true);
+}
+
+function appendSearchPhraseToGroup(optionText, optionId) {
+    const newOption = new Option(optionText, optionId, false, true);
+    // mark the option as search phrase
+    newOption.dataset.newTag = true;
+    const select = document.querySelector("select.search-filter");
+    const optgroup = select.querySelector("optgroup.search");
+    optgroup.appendChild(newOption);
+    return select;
+}
+
+function handleAppendSearchPhraseToGroup(e) {
+    const data = e.params.args.data;
+    if (!data.id.startsWith("temp-")) {
+        return;
+    }
+
+    const select = appendSearchPhraseToGroup(data.text, data.text);
+
+    // remove the temp option created after this event
+    Array.from(select.querySelectorAll(".search-filter > option"))
+        .forEach((element) => element.remove());
+    // reinitialize to make select2 recognize the new option in the optgroup
+    initializeSelect2(false);
+}
+
 function templateResult(item, container) {
     // if I wanted to color the search results, the color of the
     // exclude/highlight states would need to be handled too
     if (item.element) {
-        // currently I only use the class for coloring the optgroup
-        // so maybe I should only add the class to the optgroups?
         $(container).addClass($(item.element).attr("class"));
     }
     return item.text;
@@ -915,47 +996,53 @@ function templateSelection(item, container) {
     return label ? label + " | " + item.text : item.text;
 }
 
-function createTag(params) {
-    const selections = $(".search-filter").select2("data");
-    const searchSelection = selections.find((element) => element.newTag === true);
-    // allow only one tag (= search word)
-    if (searchSelection) {
-        return null;
-    }
-
-    const term = $.trim(params.term);
-    if (term === "") {
-        return null;
-    }
-
-    return {
-        id: term,
-        text: term,
-        newTag: true,
-    };
+/**
+ * sort select2 results so that the user-created options appear at the top
+ * @param {Array} data Array of objects representing options and option groups
+ * @returns
+ */
+function sortResults(data) {
+    const optionsOutsideGroups = data.filter((element) => element.children === undefined);
+    const groups = data.filter((element) => element.children !== undefined);
+    return optionsOutsideGroups.concat(groups);
 }
 
 function getStoredPersonData() {
     return JSON.parse(sessionStorage.getItem("personData")) ?? [];
 }
 
-function initializeSelect2() {
+/**
+ * initialize select2 and the events. reinitializing would remove all custom properties on the options' select2 objects
+ * @param {Boolean} addEvents if the select2 events should be added (to prevent adding them more than once)
+ * @returns
+ */
+function initializeSelect2(addEvents) {
     const $searchFilter = $(".search-filter").select2({
-        placeholder: "Select filters or enter search parameter",
+        placeholder: "Select filters or enter search phrases",
         maximumSelectionLength: 20,
-        tags: true,
         tokenSeparators: [","],
         allowClear: true,
         templateSelection: templateSelection,
         templateResult: templateResult,
-        createTag: createTag,
+        sorter: sortResults,
         debug: true,
         width: "100%",
     });
+
+    // this input (and the event) is destroyed on each reinitialization
+    $(".select2-search__field").on("input", updateSearchPhrase);
+
+    if (!addEvents) {
+        return;
+    }
+
     $searchFilter.on("change", function () {
         const persons = getStoredPersonData();
         updateTable(persons);
     });
+
+    $searchFilter.on("select2:selecting", handleAppendSearchPhraseToGroup);
+
     // prevents opening the dropdown after unselecting an item
     $searchFilter.on("select2:unselecting", function () {
         $(this).on("select2:opening", function (ev) {
@@ -970,7 +1057,7 @@ function initializeSelect2() {
 // previous search as soon as a search word or filter is entered
 sessionStorage.removeItem("personData");
 
-initializeSelect2();
+initializeSelect2(true);
 initializeTableBody();
 initializeSearch();
 initializeModal();

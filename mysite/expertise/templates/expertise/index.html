@@ -36,6 +36,7 @@
             </h3>
             <label for="search-filter" class="form-label visually-hidden">Search and filter</label>
             <select class="form-select search-filter" multiple="multiple" name="filters[]" autofocus>
+                <optgroup class="search" label="Search history"></optgroup>
                 {% for key, item in suggestions.items %}
                 <optgroup class="{{ item.class }}" label="{{ item.group }}">
                     {% comment %}
