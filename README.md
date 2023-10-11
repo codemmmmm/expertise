@@ -137,9 +137,9 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
 
 # Updating
 
-1. Stash changes if needed. Then get the changes `git pull`.
+1. Stash changes if needed. Then get the changes with `git pull`.
 
-2. Set STATIC_ROOT and ALLOWED_HOSTS as seen in installation. Then run
+2. Apply the stashed changes. Set STATIC_ROOT and ALLOWED_HOSTS as seen in installation, if necessary. Then run
     ```
     python3 ~/expertise/mysite/manage.py makemigrations
     python3 ~/expertise/mysite/manage.py migrate
