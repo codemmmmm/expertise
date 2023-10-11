@@ -142,20 +142,20 @@ def get_all_person_data(persons: list) -> list[dict]:
     entries.sort(key=lambda x: get_surname(x["person"]["name"]))
     return entries
 
-def get_filtered_data(search_param: str) -> list[dict]:
-    search_param = search_param.lower()
-    if search_param == "":
+def get_filtered_data(search_phrases: list[str]) -> list[dict]:
+    search_phrases = [x.lower() for x in search_phrases if x != ""]
+    if not search_phrases:
         matching_persons = Person.nodes.all()
     else:
-        # this doesn't search email or title of persons
-        # "NOT n:Person" prevents searching persons that are advisors to p:Person because
-        # there is no point in showing them in the table if a search parameter is given
-        query = ("MATCH (p:Person)-[r]-(n) "
-                "WHERE toLower(n.name) CONTAINS $search "
-                "AND NOT n:Person "
-                "OR toLower(p.name) CONTAINS $search "
-                "RETURN DISTINCT p;")
-        results, _ = db.cypher_query(query, {"search": search_param}, resolve_objects=True)
+        # this doesn't search properties of persons and advisors because I think it's not useful
+        query = (
+            "MATCH (p:Person)--(n) "
+            "WHERE NOT n:Person "
+            "WITH p, COLLECT(n.name) AS names "
+            "WHERE ALL(phrase IN $searchPhrases WHERE ANY(name IN names WHERE toLower(name) CONTAINS phrase)) "
+            "RETURN DISTINCT p;"
+        )
+        results, _ = db.cypher_query(query, {"searchPhrases": search_phrases}, resolve_objects=True)
         matching_persons = [row[0] for row in results]
     return get_all_person_data(matching_persons)
 
@@ -435,13 +435,13 @@ def trim_error(error: str) -> str:
     # with the .. it can be longer than MAX_ERROR_LENGTH
     return error[:MAX_ERROR_LENGTH] + ".." if len(error) > MAX_ERROR_LENGTH else error
 
-def get_error_response_data(errors: dict[str, Any], id: str | None = None) -> dict[str, Any]:
+def get_error_response_data(errors: dict[str, Any], field_id: str | None = None) -> dict[str, Any]:
     """
     Returns:
         dict[str, Any]: dict with keys 'id' and 'errors'
     """
     data = {
-        "id": id,
+        "id": field_id,
         "errors": errors,
     }
     return data
@@ -482,16 +482,16 @@ def index(request):
     share_params = get_share_params(share_id)
     selected_options = []
     persons_data = []
-    search_word = ""
+    search_phrases = []
     graph_node_id = ""
     if share_params:
         share_params = QueryDict(share_params.parameters)
         filters = share_params.getlist("filter")
         if filters:
             selected_options = filters
-        search_word = share_params.get("search", "")
+        search_phrases = share_params.getlist("search", [])
         # should the table be filled if only the graph view is shared?
-        persons_data = get_filtered_data(search_word)
+        persons_data = get_filtered_data(search_phrases)
         graph_node_id = share_params.get("graph-node", "")
 
     # the table data, select2 "tag" and modal with graph need to be initialized on front end
@@ -499,7 +499,7 @@ def index(request):
         "suggestions": get_suggestions(),
         "selected_options": selected_options,
         "table_data": json.dumps(persons_data, cls=DjangoJSONEncoder),
-        "search": search_word,
+        "search": json.dumps(search_phrases),
         "graph_node": graph_node_id,
     }
     return render(request, "expertise/index.html", context)
@@ -623,10 +623,10 @@ def persons_api(request):
     data = {}
     if "search" not in request.GET:
         data["error"] = "missing parameter: search"
-        return JsonResponse(data)
+        return JsonResponse(data, status=400)
 
-    search_param = request.GET.get("search")
-    persons_data = get_filtered_data(search_param)
+    search_phrases = request.GET.getlist("search")
+    persons_data = get_filtered_data(search_phrases)
     data["persons"] = persons_data
     return JsonResponse(data)
 

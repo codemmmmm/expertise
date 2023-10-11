@@ -1,10 +1,11 @@
 import os
-import sys
+import json
 from typing import Sequence
 
 from django.test import TestCase
 from django.contrib.auth.models import User, Group, Permission
-from neomodel import config, db, clear_neo4j_database, install_all_labels, DoesNotExist
+from django.http import QueryDict
+from neomodel import db, clear_neo4j_database, install_all_labels
 
 from expertise.models import (
     Person,
@@ -15,13 +16,21 @@ from expertise.models import (
     Role,
     Expertise,
     EditSubmission,
+    ShareParameters,
 )
 from expertise.forms import EditForm
-from expertise.views import *
+from expertise.views import (
+    is_same_string_or_list,
+    is_same_data,
+    get_submission_or_none,
+    save_submission,
+    get_submissions_forms,
+    get_filtered_data,
+)
 
 # e.g. the form would still use the non-test database because it is
 # initialized before the test is run
-url_with_database = os.environ['NEO4J_BOLT_URL']
+url_with_database = os.environ["NEO4J_BOLT_URL"]
 split_url = url_with_database.split("/")
 split_url[-1] = "test"
 test_url = "/".join(split_url)
@@ -42,15 +51,15 @@ def create_group_and_user(test_case: TestCase) -> None:
 class IndexViewTestCase(TestCase):
     def setUp(self):
         clear_neo4j_database(db)
-        person1 = Person(title="Prof", name="Adviso").save()
-        person2 = Person(name="Person").save()
-        interest = ResearchInterest(name="interest").save()
-        institute = Institute(name="institute").save()
-        fac = Faculty(name="faculty").save()
-        dep = Department(name="department").save()
-        role = Role(name="role").save()
-        offered_exp = Expertise(name="offered E").save()
-        wanted_exp = Expertise(name="wanted E").save()
+        Person(title="Prof", name="Adviso").save()
+        Person(name="Person").save()
+        ResearchInterest(name="interest").save()
+        Institute(name="institute").save()
+        Faculty(name="faculty").save()
+        Department(name="department").save()
+        Role(name="role").save()
+        Expertise(name="offered E").save()
+        Expertise(name="wanted E").save()
 
     def test_suggestions_count(self):
         response = self.client.get("/expertise/")
@@ -84,29 +93,30 @@ class IndexViewTestCase(TestCase):
 class PersonApiTestCase(TestCase):
     def setUp(self):
         clear_neo4j_database(db)
-        person1 = Person(title="Prof", name="Adviso", comment="I am hiring").save()
-        person2 = Person(name="Person").save()
-        interest = ResearchInterest(name="interest").save()
-        institute = Institute(name="institute").save()
-        fac = Faculty(name="faculty").save()
-        dep = Department(name="department").save()
-        role = Role(name="role").save()
-        offered_exp = Expertise(name="offered E").save()
-        wanted_exp = Expertise(name="wanted E").save()
 
     def test_missing_parameter(self):
         response = self.client.get("/expertise/persons")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
 
     def test_correct_response(self):
+        Person(title="Prof", name="Adviso", comment="I am hiring").save()
+        Person(name="Person").save()
+        ResearchInterest(name="interest").save()
+        Institute(name="institute").save()
+        Faculty(name="faculty").save()
+        Department(name="Department").save()
+        Role(name="role").save()
+        Expertise(name="offered E").save()
+        Expertise(name="wanted E").save()
+
         response = self.client.get("/expertise/persons?search=")
-        json = response.json()
+        data = response.json()
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("error", json)
-        self.assertIn("persons", json)
-        self.assertEqual(2, len(json["persons"]))
-        for entry in json["persons"]:
+        self.assertNotIn("error", data)
+        self.assertIn("persons", data)
+        self.assertEqual(2, len(data["persons"]))
+        for entry in data["persons"]:
             self.assertIn("person", entry)
             self.assertNotIn("comment", entry["person"])
             self.assertIn("interests", entry)
@@ -119,8 +129,62 @@ class PersonApiTestCase(TestCase):
             self.assertIn("advisors", entry)
 
         response = self.client.get("/expertise/persons?search=thisDataDoesNotExist")
-        json = response.json()
-        self.assertEqual([], json["persons"])
+        data = response.json()
+        self.assertEqual([], data["persons"])
+
+    def test_one_search_phrase(self):
+        person1 = Person(title="Prof", name="Adviso", comment="I am hiring").save()
+        person2 = Person(name="Person").save()
+        department = Department(name="ZIH").save()
+        offered = Expertise(name="Python").save()
+        person1.offered_expertise.connect(offered)
+        person2.departments.connect(department)
+
+        # search "python"
+        response = self.client.get("/expertise/persons?search=pyth")
+        data = response.json()
+        self.assertEqual(len(data["persons"]), 1)
+        person_data = data["persons"][0]
+        self.assertEqual(person_data["offered"][0]["name"], "Python")
+        self.assertEqual(person_data["person"]["name"], "Adviso")
+
+    def test_no_parameter(self):
+        person1 = Person(title="Prof", name="Adviso", comment="I am hiring").save()
+        person2 = Person(name="Person").save()
+        department = Department(name="ZIH").save()
+        offered = Expertise(name="Python").save()
+        person1.offered_expertise.connect(offered)
+        person2.departments.connect(department)
+
+        # search nothing
+        response = self.client.get("/expertise/persons?search")
+        data = response.json()
+        self.assertEqual(len(data["persons"]), 2)
+
+    def test_multiple_search_phrases(self):
+        person1 = Person(title="Prof", name="Adviso", comment="I am hiring").save()
+        person2 = Person(name="Hans").save()
+        department = Department(name="ZIH").save()
+        offered = Expertise(name="Python").save()
+        interest = ResearchInterest(name="biology").save()
+        person1.offered_expertise.connect(offered)
+        person2.departments.connect(department)
+        person2.interests.connect(interest)
+
+        # search "python" and ""
+        response = self.client.get("/expertise/persons?search=pyth&search=")
+        data = response.json()
+        self.assertEqual(len(data["persons"]), 1)
+
+        # search "hans" and "ZIH" but person name is ignored
+        response = self.client.get("/expertise/persons?search=hans&search=ZIH")
+        data = response.json()
+        self.assertEqual(len(data["persons"]), 0)
+
+        # search "biology" and "ZIH"
+        response = self.client.get("/expertise/persons?search=biology&search=ZIH")
+        data = response.json()
+        self.assertEqual(len(data["persons"]), 1)
 
 class GraphApiTestCase(TestCase):
     def setUp(self):
@@ -147,14 +211,14 @@ class GraphApiTestCase(TestCase):
     def test_data(self):
         # nodes
         person1 = Person(title="Prof", name="Adviso", comment="I am hiring").save()
-        person2 = Person(name="Person").save()
+        Person(name="Person").save()
         interest = ResearchInterest(name="interest").save()
         institute = Institute(name="institute").save()
-        fac = Faculty(name="faculty").save()
-        dep = Department(name="department").save()
-        role = Role(name="role").save()
+        Faculty(name="faculty").save()
+        Department(name="department").save()
+        Role(name="role").save()
         expertise1 = Expertise(name="offered E").save()
-        expertise2 = Expertise(name="wanted E").save()
+        Expertise(name="wanted E").save()
         # relationships
         person1.interests.connect(interest)
         person1.institutes.connect(institute)
@@ -176,8 +240,8 @@ class GraphApiTestCase(TestCase):
             self.assertIn("endNode", rel)
             self.assertIn("type", rel)
 
-def get_submission_from_person_id(id: str) -> EditSubmission:
-    return EditSubmission.objects.get(person_id_new=id)
+def get_submission_from_person_id(person_id: str) -> EditSubmission:
+    return EditSubmission.objects.get(person_id_new=person_id)
 
 def get_submission_from_person_email(email: str, name: str) -> EditSubmission:
     return EditSubmission.objects.get(person_email_new=email, person_name_new=name)
@@ -198,8 +262,8 @@ def get_post_data(submission: EditSubmission, action) -> dict[str, str | Sequenc
     )
     post_data = {}
     for property_name, key in property_and_key_names:
-            prefixed_key = str(submission.id) + "new-" + key
-            post_data[prefixed_key] = getattr(submission, property_name + "_new")
+        prefixed_key = str(submission.id) + "new-" + key
+        post_data[prefixed_key] = getattr(submission, property_name + "_new")
     post_data["action"] = action
     post_data["submissionId"] = submission.id
     return post_data
@@ -274,7 +338,7 @@ class EditTestCase(TestCase):
         self.client.login(username=self.user.username, password=self.password)
         # nodes
         person1 = Person(name="Jake", email="a@a.com", title="title").save()
-        person2 = Person(name="Person").save()
+        Person(name="Person").save()
         interest = ResearchInterest(name="interest").save()
         offered_exp = Expertise(name="expertise").save()
         wanted_exp = offered_exp
@@ -296,7 +360,7 @@ class EditTestCase(TestCase):
 
         submission = get_submission_from_person_id(person1.pk)
         submission_data = get_post_data(submission, "approve")
-        response = self.client.post("/expertise/approve", submission_data)
+        self.client.post("/expertise/approve", submission_data)
 
         person1.refresh()
         self.assertEqual(person1.email, "b@b.com")
@@ -361,14 +425,14 @@ class EditTestCase(TestCase):
 
         submission = get_submission_from_person_email("a@a.com", "new person")
         submission_data = get_post_data(submission, "approve")
-        response = self.client.post("/expertise/approve", submission_data)
+        self.client.post("/expertise/approve", submission_data)
 
         person = Person.nodes.get(name="new person")
         self.assertIsNotNone(person)
         self.assertEqual(person.offered_expertise.all()[0].name, "new expertise")
 
     def test_duplicate_email(self):
-        person = Person(name="ash", email="a@a.com").save()
+        Person(name="ash", email="a@a.com").save()
         person2 = Person(name="rock", email="b@b.com").save()
 
         post_data = {
@@ -404,7 +468,7 @@ class EditTestCase(TestCase):
 
         submission = get_submission_from_person_id(person.pk)
         submission_data = get_post_data(submission, "approve")
-        response = self.client.post("/expertise/approve", submission_data)
+        self.client.post("/expertise/approve", submission_data)
 
         self.assertEqual(person.offered_expertise.all()[0].name, "new expertise")
 
@@ -462,7 +526,7 @@ class EditTestCase(TestCase):
             "institutes": ["new institute", institute.pk],
             "offered": ["new expertise", "new expertise"],
         }
-        response = self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit-form", post_data)
 
         submission = get_submission_from_person_email("a@a.com", "new person")
         submission_data = get_post_data(submission, "approve")
@@ -772,7 +836,6 @@ class EditSubmissionTestCase(TestCase):
         # index 0 is the new field
         self.assertCountEqual(submission_data1["data"][name_field_index][0].value(), person.name)
         self.assertCountEqual(submission_data1["data"][expertise_field_index][0].value(), [exp1.pk, exp2.pk, "new expertise"])
-        submission_data2 = submissions_data[1]
         self.assertCountEqual(submission_data1["data"][faculties_field_index][0].value(), [])
 
     def test_add_missing_choices(self):
@@ -858,8 +921,9 @@ class ShortenLinkTestCase(TestCase):
         self.assertEqual(response.context["selected_options"], shared_params.getlist("filter"))
         table_data = get_filtered_data(shared_params.get("search"))
         actual_table_data = json.loads(response.context["table_data"])
+        self.assertTrue(len(actual_table_data) > 0)
         self.assertEqual(actual_table_data, table_data)
-        self.assertEqual(response.context["search"], shared_params.get("search"))
+        self.assertEqual(json.loads(response.context["search"]), shared_params.getlist("search"))
 
     def test_inflate_empty(self):
         # add data to Neo4j
@@ -874,4 +938,4 @@ class ShortenLinkTestCase(TestCase):
         response = self.client.get("/expertise/?share=1")
         self.assertEqual(response.context["selected_options"], [])
         self.assertEqual(response.context["table_data"], json.dumps([]))
-        self.assertEqual(response.context["search"], "")
+        self.assertEqual(json.loads(response.context["search"]), [])

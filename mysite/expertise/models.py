@@ -1,5 +1,3 @@
-from typing import Any
-import json
 from django.db import models
 from neomodel import StringProperty, EmailProperty, RelationshipTo, UniqueIdProperty
 from django_neomodel import DjangoNode

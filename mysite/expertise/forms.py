@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 
 from expertise.models import (
     Person,
@@ -12,6 +13,7 @@ from expertise.models import (
 
 # TODO: validate should also validate each list item's length
 class MultipleChoiceAndNewField(forms.MultipleChoiceField):
+    """MultipleChoiceField but new values are allowed"""
     def to_python(self, value):
         if not value:
             return []
@@ -19,10 +21,9 @@ class MultipleChoiceAndNewField(forms.MultipleChoiceField):
             raise ValidationError(
                 self.error_messages["invalid_list"], code="invalid_list"
             )
-        # remove duplicates
-        return list(set([str(val) for val in value]))
+        # remove duplicates with set
+        return list({str(val) for val in value})
 
-    """MultipleChoiceField but new values are allowed"""
     def validate(self, value):
         """Validate that the input is a list or tuple."""
         if self.required and not value:
