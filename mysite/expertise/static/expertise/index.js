@@ -118,16 +118,19 @@ async function fetchShortenedParams(longValue) {
  */
 function loadSharedViewFromHtml() {
     const dataEl = document.querySelector("#share-data");
-    const tableData = dataEl.dataset.table;
-    if (tableData !== "[]") {
-        sessionStorage.setItem("personData", tableData);
-        const persons = getStoredPersonData();
-        updateTable(persons);
-        document.querySelector(".persons-table-container").classList.remove("d-none");
-    }
-
     const searchPhrases = JSON.parse(dataEl.dataset.search);
     searchPhrases.forEach((phrase) => appendSearchPhraseToGroup(phrase));
+
+    const tableData = JSON.parse(dataEl.dataset.table);
+    if (tableData.length) {
+        const searchData = {
+            searchPhrases: searchPhrases,
+            data: tableData,
+        };
+        sessionStorage.setItem("personData", JSON.stringify(searchData));
+        updateTable(tableData);
+        document.querySelector(".persons-table-container").classList.remove("d-none");
+    }
     initializeSelect2(false);
 
     const nodeId = dataEl.dataset.graph;
@@ -171,35 +174,46 @@ async function getPersons(searchPhrases) {
     }
 }
 
-function search(e) {
+function searchAndUpdate(e) {
     e.preventDefault();
-    showSearchLoading(e.target);
-    // get search parameter
+
+    // get search phrases
     const selections = $(".search-filter").select2("data");
     const searchSelections = selections.filter((element) => element.element.dataset.newTag === "true");
-    const searchPhrases = searchSelections.map((phrase) => phrase.text);//searchSelections === undefined ? "" : searchSelections.text;
+    const searchPhrases = searchSelections.map((phrase) => phrase.text);
 
-    getPersons(searchPhrases).then((data) => {
-        if (data === undefined) {
-            // set the sessionStorage to empty array to prevent other actions
-            // possibly using outdated search results
-            sessionStorage.setItem("personData", JSON.stringify([]));
-            updateAlert(null);
-            hideSearchLoading(e.target);
+    // don't fetch data from the server if it's the same search phrases
+    const personData = JSON.parse(sessionStorage.getItem("personData"));
+    if (personData) {
+        const lastSearchPhrases = personData?.searchPhrases ?? [];
+        if (JSON.stringify(lastSearchPhrases) === JSON.stringify(searchPhrases)) {
+            const searchResults = personData.data;
+            updateTable(searchResults);
             return;
         }
-        const persons = data.persons;
-        sessionStorage.setItem("personData", JSON.stringify(persons));
+    }
+
+    showSearchLoading(e.target);
+    getPersons(searchPhrases).then((data) => {
         hideSearchLoading(e.target);
-        updateTable(persons);
+        if (data === undefined) {
+            updateAlert(null);
+            return;
+        }
+        const searchData = {
+            searchPhrases: searchPhrases,
+            data: data.persons,
+        };
+        sessionStorage.setItem("personData", JSON.stringify(searchData));
+        updateTable(data.persons);
         document.querySelector(".persons-table-container").classList.remove("d-none");
     });
 }
 
-function updateTable(persons) {
-    const filteredPersons = filter_persons(persons);
-    fillTable(filteredPersons);
-    updateAlert(persons.length, filteredPersons.length);
+function updateTable(personData) {
+    const filteredPersonData = filterPersonData(personData);
+    fillTable(filteredPersonData);
+    updateAlert(personData.length, filteredPersonData.length);
 }
 
 function updateAlert(searchedLength, filteredLength) {
@@ -332,9 +346,8 @@ function prepareGraphData(apiData) {
 /**
  *
  * @param {*} apiData
- * @param {*} personId
- * @param {*} containerId
- * @param {*} containerWidth
+ * @param {String} containerId
+ * @param {HTMLElement} container
  * @returns {string} name of the person that the graph is about
  */
 function drawG6Graph(apiData, containerId, container){
@@ -593,7 +606,7 @@ function resetModalContent() {
     document.querySelector("#graph-container").replaceChildren();
 }
 
-function group_filters(filters, id) {
+function groupFilters(filters, id) {
     return filters.filter((filter) => filter.id.substring(0, 4) === id);
 }
 
@@ -630,9 +643,9 @@ function isMatchingPerson(filters, person, ignoreEmpty=false) {
 
 /**
  * returns filtered array of persons.
- * @param {Array} persons
+ * @param {Array} personData
  */
-function filter_persons(persons) {
+function filterPersonData(personData) {
     const selections = $(".search-filter").select2("data");
     // excluding the user created selections here is only necessary
     // because a user might create a tag with e.g. the value "inst-xxx"
@@ -640,32 +653,32 @@ function filter_persons(persons) {
 
     // group the filters by category
     // the id is the key prepended to the suggestions in the Django template
-    const person_filters = group_filters(filters, "pers");
-    const interests_filters = group_filters(filters, "inte");
-    const institutes_filters = group_filters(filters, "inst");
-    const faculties_filters = group_filters(filters, "facu");
-    const departments_filters = group_filters(filters, "depa");
-    const roles_filters = group_filters(filters, "role");
-    const advisors_filters = group_filters(filters, "advi");
-    const offered_filters = group_filters(filters, "offe");
-    const wanted_filters = group_filters(filters, "want");
+    const personFilters = groupFilters(filters, "pers");
+    const interestsFilters = groupFilters(filters, "inte");
+    const institutesFilters = groupFilters(filters, "inst");
+    const facultiesFilters = groupFilters(filters, "facu");
+    const departmentsFilters = groupFilters(filters, "depa");
+    const rolesFilters = groupFilters(filters, "role");
+    const advisorsFilters = groupFilters(filters, "advi");
+    const offeredFilters = groupFilters(filters, "offe");
+    const wantedFilters = groupFilters(filters, "want");
 
     // filters of different categories are generally connected by AND
     // the persons/advisors and offered/wanted expertise categories use OR
-    const filtered = persons.filter((person) => {
-        const matchingPersons = isMatchingPerson(person_filters, person.person, true) ||
-            isMatching(advisors_filters, person.advisors, true) ||
-            (person_filters.length === 0 && advisors_filters.length === 0);
-        const matchingExpertise = isMatching(offered_filters, person.offered, true) ||
-            isMatching(wanted_filters, person.wanted, true) ||
-            (offered_filters.length === 0 && wanted_filters.length === 0);
+    const filtered = personData.filter((entry) => {
+        const matchingPersons = isMatchingPerson(personFilters, entry.person, true) ||
+            isMatching(advisorsFilters, entry.advisors, true) ||
+            (personFilters.length === 0 && advisorsFilters.length === 0);
+        const matchingExpertise = isMatching(offeredFilters, entry.offered, true) ||
+            isMatching(wantedFilters, entry.wanted, true) ||
+            (offeredFilters.length === 0 && wantedFilters.length === 0);
 
         return matchingPersons &&
-            isMatching(interests_filters, person.interests) &&
-            isMatching(institutes_filters, person.institutes) &&
-            isMatching(faculties_filters, person.faculties) &&
-            isMatching(departments_filters, person.departments) &&
-            isMatching(roles_filters, person.roles) &&
+            isMatching(interestsFilters, entry.interests) &&
+            isMatching(institutesFilters, entry.institutes) &&
+            isMatching(facultiesFilters, entry.faculties) &&
+            isMatching(departmentsFilters, entry.departments) &&
+            isMatching(rolesFilters, entry.roles) &&
             matchingExpertise;
     });
     return filtered;
@@ -762,37 +775,37 @@ function appendEmailCell(tableRow, email) {
     container.appendChild(emailLink);
 }
 
-function fillTable(persons) {
+function fillTable(personData) {
     const tableBody = document.querySelector(".persons-table tbody");
     // remove all children
     tableBody.replaceChildren();
-    persons.forEach((p) => {
+    personData.forEach((entry) => {
         const tr = document.createElement("tr");
-        tr.dataset.pk = p.person.pk;
+        tr.dataset.pk = entry.person.pk;
         emulateButton(tr, makeGraphWrapper);
 
-        appendEmailCell(tr, p.person.email);
+        appendEmailCell(tr, entry.person.email);
 
         const personEl = document.createElement("td");
-        const personText = concatTitleName(p.person.title, p.person.name);
-        const personPill = makePill(personText, "pers-" + p.person.pk);
+        const personText = concatTitleName(entry.person.title, entry.person.name);
+        const personPill = makePill(personText, "pers-" + entry.person.pk);
         personEl.appendChild(personPill);
         tr.appendChild(personEl);
 
-        appendBasicTableCell(tr, p.interests, "inte");
-        appendBasicTableCell(tr, p.institutes, "inst");
-        appendBasicTableCell(tr, p.faculties, "facu");
-        appendBasicTableCell(tr, p.departments, "depa");
+        appendBasicTableCell(tr, entry.interests, "inte");
+        appendBasicTableCell(tr, entry.institutes, "inst");
+        appendBasicTableCell(tr, entry.faculties, "facu");
+        appendBasicTableCell(tr, entry.departments, "depa");
         // should advisor titles be shown?
-        appendBasicTableCell(tr, p.advisors, "advi");
-        appendBasicTableCell(tr, p.roles, "role");
-        appendBasicTableCell(tr, p.offered, "offe");
-        appendBasicTableCell(tr, p.wanted, "want");
+        appendBasicTableCell(tr, entry.advisors, "advi");
+        appendBasicTableCell(tr, entry.roles, "role");
+        appendBasicTableCell(tr, entry.offered, "offe");
+        appendBasicTableCell(tr, entry.wanted, "want");
 
         tableBody.appendChild(tr);
     });
     // to enable tabbing into the table
-    if (persons.length > 0) {
+    if (personData.length > 0) {
         tableBody.firstChild.tabIndex = 0;
     }
 }
@@ -864,7 +877,7 @@ function initializeTableBody() {
 
 function initializeSearch() {
     const searchEl = document.querySelector("#search-button");
-    searchEl.addEventListener("click", search);
+    searchEl.addEventListener("click", searchAndUpdate);
 }
 
 function handleMinimize() {
@@ -921,7 +934,8 @@ function appendNewOption(text, temporary) {
             .map((element) => element.id);
         $(".search-filter").val(valuesForSelectionsWithoutNewOption);
     }
-    $(".search-filter").trigger("change");
+    // triggers only select2 change to prevent the table/search update happening every time
+    $(".search-filter").trigger("change.select2");
 }
 
 /**
@@ -1016,10 +1030,6 @@ function sortResults(data) {
     return optionsOutsideGroups.concat(groups);
 }
 
-function getStoredPersonData() {
-    return JSON.parse(sessionStorage.getItem("personData")) ?? [];
-}
-
 /**
  * initialize select2 and the events. reinitializing would remove all custom properties on the options' select2 objects
  * @param {Boolean} addEvents if the select2 events should be added (to prevent adding them more than once)
@@ -1045,9 +1055,9 @@ function initializeSelect2(addEvents) {
         return;
     }
 
-    $searchFilter.on("change", function () {
-        const persons = getStoredPersonData();
-        updateTable(persons);
+    $searchFilter.on("change", () => {
+        const searchEl = document.querySelector("#search-button");
+        searchEl.click();
     });
 
     $searchFilter.on("select2:selecting", handleAppendSearchPhraseToGroup);
