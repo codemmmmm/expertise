@@ -116,16 +116,19 @@ async function fetchShortenedParams(longValue) {
  */
 function loadSharedViewFromHtml() {
     const dataEl = document.querySelector("#share-data");
-    const tableData = dataEl.dataset.table;
-    if (tableData !== "[]") {
-        sessionStorage.setItem("personData", tableData);
-        const persons = getStoredPersonData();
-        updateTable(persons);
-        document.querySelector(".persons-table-container").classList.remove("d-none");
-    }
-
     const searchPhrases = JSON.parse(dataEl.dataset.search);
     searchPhrases.forEach((phrase) => appendSearchPhraseToGroup(phrase));
+
+    const tableData = JSON.parse(dataEl.dataset.table);
+    if (tableData.length) {
+        const searchData = {
+            searchPhrases: searchPhrases,
+            data: tableData,
+        };
+        sessionStorage.setItem("personData", JSON.stringify(searchData));
+        updateTable(tableData);
+        document.querySelector(".persons-table-container").classList.remove("d-none");
+    }
     initializeSelect2(false);
 
     const nodeId = dataEl.dataset.graph;
@@ -169,35 +172,46 @@ async function getPersons(searchPhrases) {
     }
 }
 
-function search(e) {
+function searchAndUpdate(e) {
     e.preventDefault();
-    showSearchLoading(e.target);
-    // get search parameter
+
+    // get search phrases
     const selections = $(".search-filter").select2("data");
     const searchSelections = selections.filter((element) => element.element.dataset.newTag === "true");
-    const searchPhrases = searchSelections.map((phrase) => phrase.text);//searchSelections === undefined ? "" : searchSelections.text;
+    const searchPhrases = searchSelections.map((phrase) => phrase.text);
 
-    getPersons(searchPhrases).then((data) => {
-        if (data === undefined) {
-            // set the sessionStorage to empty array to prevent other actions
-            // possibly using outdated search results
-            sessionStorage.setItem("personData", JSON.stringify([]));
-            updateAlert(null);
-            hideSearchLoading(e.target);
+    // don't fetch data from the server if it's the same search phrases
+    const personData = JSON.parse(sessionStorage.getItem("personData"));
+    if (personData) {
+        const lastSearchPhrases = personData?.searchPhrases ?? [];
+        if (JSON.stringify(lastSearchPhrases) === JSON.stringify(searchPhrases)) {
+            const searchResults = personData.data;
+            updateTable(searchResults);
             return;
         }
-        const persons = data.persons;
-        sessionStorage.setItem("personData", JSON.stringify(persons));
+    }
+
+    showSearchLoading(e.target);
+    getPersons(searchPhrases).then((data) => {
         hideSearchLoading(e.target);
-        updateTable(persons);
+        if (data === undefined) {
+            updateAlert(null);
+            return;
+        }
+        const searchData = {
+            searchPhrases: searchPhrases,
+            data: data.persons,
+        };
+        sessionStorage.setItem("personData", JSON.stringify(searchData));
+        updateTable(data.persons);
         document.querySelector(".persons-table-container").classList.remove("d-none");
     });
 }
 
-function updateTable(persons) {
-    const filteredPersons = filter_persons(persons);
-    fillTable(filteredPersons);
-    updateAlert(persons.length, filteredPersons.length);
+function updateTable(personData) {
+    const filteredPersonData = filter_persons(personData);
+    fillTable(filteredPersonData);
+    updateAlert(personData.length, filteredPersonData.length);
 }
 
 function updateAlert(searchedLength, filteredLength) {
@@ -754,11 +768,11 @@ function appendEmailCell(tableRow, email) {
     container.appendChild(emailLink);
 }
 
-function fillTable(persons) {
+function fillTable(personData) {
     const tableBody = document.querySelector(".persons-table tbody");
     // remove all children
     tableBody.replaceChildren();
-    persons.forEach((p) => {
+    personData.forEach((p) => {
         const tr = document.createElement("tr");
         tr.dataset.pk = p.person.pk;
         emulateButton(tr, makeGraphWrapper);
@@ -783,7 +797,7 @@ function fillTable(persons) {
         tableBody.appendChild(tr);
     });
     // to enable tabbing into the table
-    if (persons.length > 0) {
+    if (personData.length > 0) {
         tableBody.firstChild.tabIndex = 0;
     }
 }
@@ -855,7 +869,7 @@ function initializeTableBody() {
 
 function initializeSearch() {
     const searchEl = document.querySelector("#search-button");
-    searchEl.addEventListener("click", search);
+    searchEl.addEventListener("click", searchAndUpdate);
 }
 
 function handleMinimize() {
@@ -869,6 +883,15 @@ function handleMinimize() {
     } else {
         maximizeEl.classList.add("d-none");
     }
+}
+
+/**
+ * update the table data by searching with the search phrases and applying the filters.
+ * cached search results may be used
+ */
+function updateData() {
+    const searchEl = document.querySelector("#search-button");
+    searchEl.click();
 }
 
 function setFocus() {
@@ -912,7 +935,8 @@ function appendNewOption(text, temporary) {
             .map((element) => element.id);
         $(".search-filter").val(valuesForSelectionsWithoutNewOption);
     }
-    $(".search-filter").trigger("change");
+    // triggers only select2 change to prevent the table/search update happening every time
+    $(".search-filter").trigger("change.select2");
 }
 
 /**
@@ -1007,10 +1031,6 @@ function sortResults(data) {
     return optionsOutsideGroups.concat(groups);
 }
 
-function getStoredPersonData() {
-    return JSON.parse(sessionStorage.getItem("personData")) ?? [];
-}
-
 /**
  * initialize select2 and the events. reinitializing would remove all custom properties on the options' select2 objects
  * @param {Boolean} addEvents if the select2 events should be added (to prevent adding them more than once)
@@ -1036,10 +1056,7 @@ function initializeSelect2(addEvents) {
         return;
     }
 
-    $searchFilter.on("change", function () {
-        const persons = getStoredPersonData();
-        updateTable(persons);
-    });
+    $searchFilter.on("change", updateData);
 
     $searchFilter.on("select2:selecting", handleAppendSearchPhraseToGroup);
 
