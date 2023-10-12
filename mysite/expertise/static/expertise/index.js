@@ -992,6 +992,11 @@ function handleAppendSearchPhraseToGroup(e) {
         .forEach((element) => element.remove());
     // reinitialize to make select2 recognize the new option in the optgroup
     initializeSelect2(false);
+    select.focus();
+    // prevent the dropdown opening because of the manual re-focus
+    $(".search-filter").on("select2:opening", (e) => e.preventDefault());
+    // restore dropdown opening functionality
+    setTimeout(() => $(".search-filter").off("select2:opening"), 60);
 }
 
 function templateResult(item, container) {
@@ -1064,8 +1069,8 @@ function initializeSelect2(addEvents) {
 
     // prevents opening the dropdown after unselecting an item
     $searchFilter.on("select2:unselecting", function () {
-        $(this).on("select2:opening", function (ev) {
-            ev.preventDefault();
+        $(this).on("select2:opening", function (e) {
+            e.preventDefault();
             $(this).off("select2:opening");
         });
     });
