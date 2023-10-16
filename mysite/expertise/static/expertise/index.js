@@ -128,7 +128,7 @@ function loadSharedViewFromHtml() {
             data: tableData,
         };
         sessionStorage.setItem("personData", JSON.stringify(searchData));
-        updateTable(tableData);
+        updateTable(tableData, searchPhrases);
         document.querySelector(".persons-table-container").classList.remove("d-none");
     }
     initializeSelect2(false);
@@ -188,7 +188,7 @@ function searchAndUpdate(e) {
         const lastSearchPhrases = personData?.searchPhrases ?? [];
         if (JSON.stringify(lastSearchPhrases) === JSON.stringify(searchPhrases)) {
             const searchResults = personData.data;
-            updateTable(searchResults);
+            updateTable(searchResults, searchPhrases);
             return;
         }
     }
@@ -205,15 +205,118 @@ function searchAndUpdate(e) {
             data: data.persons,
         };
         sessionStorage.setItem("personData", JSON.stringify(searchData));
-        updateTable(data.persons);
+        updateTable(data.persons, searchPhrases);
         document.querySelector(".persons-table-container").classList.remove("d-none");
     });
 }
 
-function updateTable(personData) {
+function updateTable(personData, searchPhrases) {
     const filteredPersonData = filterPersonData(personData);
     fillTable(filteredPersonData);
     updateAlert(personData.length, filteredPersonData.length);
+    highlightSearchPhrases(searchPhrases);
+}
+
+/**
+ *
+ * @param {Array.<String>} searchPhrases
+ * @returns
+ */
+function highlightSearchPhrases(searchPhrases) {
+    if (!searchPhrases.length) {
+        return;
+    }
+
+    const table = document.querySelector("table.persons-table");
+    // 1st, 2nd and 7th column is excluded because their contents
+    // weren't searched on backend at the time of writing
+    const nodes = table.querySelectorAll("\
+        td:nth-child(3) > .pill,\
+        td:nth-child(4) > .pill,\
+        td:nth-child(5) > .pill,\
+        td:nth-child(6) > .pill,\
+        td:nth-child(8) > .pill,\
+        td:nth-child(9) > .pill,\
+        td:nth-child(10) > .pill"
+    );
+    searchPhrases = searchPhrases.map((phrase) => phrase.toLowerCase());
+    nodes.forEach((node) => {
+        const ranges = [];
+        const nodeText = node.textContent.toLowerCase();
+        searchPhrases.forEach((searchPhrase) => {
+            let start = 0;
+            let foundAt = nodeText.indexOf(searchPhrase, start);
+            while (foundAt > -1) {
+                ranges.push({
+                    start: foundAt,
+                    end: foundAt + searchPhrase.length - 1, // index of the last character to include
+                });
+                start = foundAt + 1;
+                foundAt = nodeText.indexOf(searchPhrase, start);
+            }
+        });
+
+        if (!ranges.length) {
+            return;
+        }
+        const mergedRanges = mergeSubstringRanges(ranges);
+        highlightSubstrings(node, mergedRanges);
+    });
+}
+
+/**
+ *
+ * @param {Array.<Object>} ranges is sorted and guaranteed to not be empty
+ */
+function mergeSubstringRanges(ranges) {
+    ranges.sort((a, b) => a.start - b.start);
+    const mergedRanges = [ranges[0]];
+
+    for (let i = 1; i < ranges.length; i++) {
+        const current = ranges[i];
+        const previous = mergedRanges[mergedRanges.length - 1];
+
+        if (current.start <= previous.end) {
+            previous.end = Math.max(previous.end, current.end);
+        } else {
+            mergedRanges.push(current);
+        }
+    }
+
+    return mergedRanges;
+}
+
+/**
+ *
+ * @param {HTMLElement} node
+ * @param {Array.<Object>} mergedRanges
+ */
+function highlightSubstrings(node, mergedRanges) {
+    const text = node.textContent;
+    // remove the text nodes
+    node.textContent = "";
+    let currentIndex = 0;
+
+    mergedRanges.forEach((range) => {
+        const unhighlighted = text.substring(currentIndex, range.start);
+        if (unhighlighted.length) {
+            node.appendChild(document.createTextNode(unhighlighted));
+        }
+
+        const highlighted = text.substring(range.start, range.end + 1);
+        const span = document.createElement("span");
+        span.classList.add("highlight");
+        span.textContent = highlighted;
+        node.appendChild(span);
+
+        currentIndex = range.end + 1;
+    });
+
+    // add remaining text
+    const unhighlighted = text.substring(currentIndex);
+    if (unhighlighted.length) {
+        node.appendChild(document.createTextNode(unhighlighted));
+    }
 }
 
 function updateAlert(searchedLength, filteredLength) {
