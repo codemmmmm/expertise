@@ -824,7 +824,7 @@ function toggleSelection(id) {
 
 function pillClick(e) {
     e.stopPropagation();
-    toggleSelection(e.target.dataset.pk);
+    toggleSelection(e.currentTarget.dataset.pk);
 }
 
 function makePill(text, id) {
