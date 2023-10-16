@@ -183,3 +183,8 @@ form.approve .row .col.field-changed .select2-container .select2-selection {
     font-weight: bolder;
     border-bottom: dotted 2px;
 }
+
+span.graph-helptext {
+    top: 20px;
+    left: 24px;
+}

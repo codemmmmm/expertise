@@ -129,7 +129,14 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=1069739#c24
                 <div class="spinner-border text-primary graph-spinner" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <div id="graph-container"></div>
+                <div id="graph-container">
+                    <div class="alert alert-warning graph-alert py-2 d-inline-block d-none" role="alert">
+                        alert text placeholder that you shouldn't see :&#41
+                    </div>
+                    <span class="position-absolute graph-helptext">
+                        Shift + Click a node to toggle filters
+                    </span>
+                </div>
             </div>
         </div>
     </div>

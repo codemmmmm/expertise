@@ -645,7 +645,7 @@ function showGraph(data) {
     }
     drawG6Graph(data, containerId, container);
     // select the svg or canvas element
-    const networkEl = document.querySelector("#" + containerId + " > *");
+    const networkEl = container.querySelector("svg, canvas");
     networkEl.classList.add("border", "border-info", "rounded", "rounded-1", "d-none");
     networkEl.setAttribute("alt", "Network graph");
 }
@@ -689,7 +689,11 @@ function makeGraph(personId) {
         })
         .catch((error) => {
             hideModalSpinner();
-            document.querySelector("#graph-container").textContent = error.message;
+            const errorEl = document.querySelector(".graph-alert");
+            errorEl.classList.remove("d-none");
+            errorEl.textContent = error.message;
+            const helpEl = document.querySelector(".graph-helptext");
+            helpEl.classList.add("d-none");
     });
 }
 
@@ -706,7 +710,16 @@ function hideModalSpinner() {
 
 function resetModalContent() {
     document.querySelector(".graph-spinner").classList.remove("d-none");
-    document.querySelector("#graph-container").replaceChildren();
+    const elements = document.querySelectorAll("\
+        #graph-container > svg, \
+        #graph-container > canvas, \
+        span.error \
+    ");
+    elements.forEach((element) => element.remove());
+    const errorEl = document.querySelector(".graph-alert");
+    errorEl.classList.add("d-none");
+    const helpEl = document.querySelector(".graph-helptext");
+    helpEl.classList.remove("d-none");
 }
 
 function groupFilters(filters, id) {
