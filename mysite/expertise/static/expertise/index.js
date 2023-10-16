@@ -1112,7 +1112,7 @@ function handleAppendSearchPhraseToGroup(e) {
     // prevent the dropdown opening because of the manual re-focus
     $(".search-filter").on("select2:opening", (e) => e.preventDefault());
     // restore dropdown opening functionality
-    setTimeout(() => $(".search-filter").off("select2:opening"), 60);
+    setTimeout(() => $(".search-filter").off("select2:opening"), 100);
 }
 
 function templateResult(item, container) {
