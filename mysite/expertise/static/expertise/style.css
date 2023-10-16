@@ -1,11 +1,11 @@
 :root {
-    --color-person: #59cfec;
-    --color-interest: #ebf531;
-    --color-institute: #ed8cde;
-    --color-faculty: #abc; /* or maybe #bfbfbf */
-    --color-department: #d1c08a;
-    --color-role: #f78e4c;
-    --color-expertise: #23b660;
+    --color-person: #6dd2ec;
+    --color-interest: #f1f863;
+    --color-institute: #e7a1dc;
+    --color-faculty: #adbdcc;
+    --color-department: #cdbd8b;
+    --color-role: #f49458;
+    --color-expertise: #4fc17f;
     --color-search: #e4e4e4; /* for the search/history optgroup */
 }
 
