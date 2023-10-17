@@ -116,7 +116,7 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     chmod g+w mysite/db.sqlite3
     ```
 
-9. Create the log file `mysite/log/django.log` relative to the project root.
+9. Create the directory `/home/USER/expertise/mysite/log/`, replacing USER.
 
 10. Load the database from a dump as the Neo4j user.
 
@@ -135,7 +135,7 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     sudo certbot renew --dry-run
     ```
 
-12. Create a superuser `python manage.py createsuperuser`. Log in to the admin page,
+12. Create a superuser `python ~/expertise/mysite/manage.py createsuperuser`. Log in to the admin page,
     create a group with permissions for edit submissions. Create users and assign that group so they can approve.
 
 # Updating

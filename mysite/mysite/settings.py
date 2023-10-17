@@ -117,7 +117,7 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': 'mysite/log/django.log',
+            'filename': '/home/USER/expertise/mysite/log/django.log',
             'formatter': 'verbose'
         },
     },
