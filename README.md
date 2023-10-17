@@ -65,6 +65,7 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     ```
     export NEO4J_BOLT_URL='bolt://NEO4J_USER:NEO4J_PASSWORD@localhost:7687/neo4j'
     export DJANGO_SECRET_KEY='KEY'
+    export DJANGO_LOG_LEVEL='INFO'
     ```
 
     Then run
@@ -115,13 +116,15 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     chmod g+w mysite/db.sqlite3
     ```
 
-9. Load the database from a dump as the Neo4j user.
+9. Create the log file `mysite/log/django.log` relative to the project root.
+
+10. Load the database from a dump as the Neo4j user.
 
     ```
     sudo su - neo4j -c "neo4j-admin load --from=file.dump --force"
     ```
 
-10. HTTPS using certbot (MAYBE LATER, NOT CURRENTLY)
+11. HTTPS using certbot (MAYBE LATER, NOT CURRENTLY)
 
     ```
     sudo apt install snap
@@ -132,7 +135,7 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     sudo certbot renew --dry-run
     ```
 
-11. Create a superuser `python manage.py createsuperuser`. Log in to the admin page,
+12. Create a superuser `python manage.py createsuperuser`. Log in to the admin page,
     create a group with permissions for edit submissions. Create users and assign that group so they can approve.
 
 # Updating

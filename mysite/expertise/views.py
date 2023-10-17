@@ -1,5 +1,6 @@
 from typing import Any, Sequence
 import json
+import logging
 
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse, QueryDict
@@ -24,6 +25,8 @@ from expertise.models import (
 )
 
 from expertise.forms import EditForm
+
+logger = logging.getLogger(__name__)
 
 # this shouldn't be used to trim an error message if it is a custom message
 MAX_ERROR_LENGTH = 130
@@ -446,11 +449,9 @@ def get_error_response_data(errors: dict[str, Any], field_id: str | None = None)
     }
     return data
 
-def apply_submission(submission: EditSubmission, data: dict[str, str | Sequence[str]]) -> None:
+def apply_submission(person: Person, submission: EditSubmission, data: dict[str, str | Sequence[str]]) -> None:
     db.begin()
     try:
-        person_id = submission.person_id
-        person = Person.nodes.get_or_none(pk=person_id)
         if not person:
             person = Person()
         person.name = data["name"]
@@ -464,7 +465,13 @@ def apply_submission(submission: EditSubmission, data: dict[str, str | Sequence[
         raise
     db.commit()
 
-    # TODO: log change
+def stringify_edit_submission_post(post_data: QueryDict) -> str:
+    output = []
+    for key, values in post_data.lists():
+        # the token probably needs to be kept secret
+        if key != "csrfmiddlewaretoken":
+            output.append(f"{key}{values}")
+    return ", ".join(output)
 
 def get_share_params(share_id: str | None) -> ShareParameters | None:
     if not share_id:
@@ -592,6 +599,11 @@ def approve(request):
         submission = EditSubmission.objects.filter(pk=submission_id).first()
         if action == "reject":
             if submission:
+                log = (
+                    f"REJECTED submission by {request.user}:{request.user.id} "
+                    f"with REQUEST data = {stringify_edit_submission_post(request.POST)}"
+                )
+                logger.info(log)
                 submission.delete()
             # TODO: send email to notify the person
             return JsonResponse({ "id": submission_id })
@@ -604,7 +616,18 @@ def approve(request):
         if not form.is_valid():
             return HttpResponse(form.errors.as_json(), content_type="application/json", status=422)
         try:
-            apply_submission(submission, form.cleaned_data)
+            person = Person.nodes.get_or_none(pk=submission.person_id)
+            if person:
+                data_before_change = get_person_data(person)
+            else:
+                data_before_change = "[person was created by this operation]"
+            apply_submission(person, submission, form.cleaned_data)
+            log = (
+                f"APPROVED submission by {request.user}:{request.user.id} "
+                f"with REQUEST data = {stringify_edit_submission_post(request.POST)} "
+                f"and PREVIOUS data = {data_before_change}"
+            )
+            logger.info(log)
         except Exception as e:
             errors.add_error(None, trim_error(str(e)), str(e))
             return JsonResponse(get_error_response_data(errors, submission_id), status=422)
