@@ -1,5 +1,5 @@
 from django.db import models
-from neomodel import StringProperty, EmailProperty, RelationshipTo, UniqueIdProperty
+from neomodel import StringProperty, EmailProperty, RelationshipTo, UniqueIdProperty, ArrayProperty
 from django_neomodel import DjangoNode
 from neo4j.graph import Node
 
@@ -8,6 +8,7 @@ from neo4j.graph import Node
 class ResearchInterest(DjangoNode):
     name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
+    alternatives = ArrayProperty(StringProperty())
 
     class Meta:
         app_label = "expertise"
@@ -15,6 +16,7 @@ class ResearchInterest(DjangoNode):
 class Institute(DjangoNode):
     name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
+    alternatives = ArrayProperty(StringProperty())
 
     class Meta:
         app_label = "expertise"
@@ -23,6 +25,7 @@ class Institute(DjangoNode):
 class Faculty(DjangoNode):
     name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
+    alternatives = ArrayProperty(StringProperty())
 
     class Meta:
         app_label = "expertise"
@@ -32,6 +35,7 @@ class Faculty(DjangoNode):
 class Department(DjangoNode):
     name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
+    alternatives = ArrayProperty(StringProperty())
 
     class Meta:
         app_label = "expertise"
@@ -41,6 +45,7 @@ class Department(DjangoNode):
 class Expertise(DjangoNode):
     name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
+    alternatives = ArrayProperty(StringProperty())
 
     class Meta:
         app_label = "expertise"
@@ -49,6 +54,7 @@ class Expertise(DjangoNode):
 class Role(DjangoNode):
     name = StringProperty(unique_index=True, required=True, max_length=200)
     pk = UniqueIdProperty()
+    alternatives = ArrayProperty(StringProperty())
 
     class Meta:
         app_label = "expertise"

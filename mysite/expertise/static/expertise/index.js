@@ -1,7 +1,7 @@
 /*global G6, bootstrap*/
 "use strict";
 
-import { writeToClipboard } from "./utils.js";
+import { writeToClipboard, matcher } from "./utils.js";
 
 function initializeClipboardButtons() {
     const formButton = document.querySelector("button.clipboard-button.filters");
@@ -1164,6 +1164,7 @@ function initializeSelect2(addEvents) {
         allowClear: true,
         templateSelection: templateSelection,
         templateResult: templateResult,
+        matcher: matcher,
         sorter: sortResults,
         debug: true,
         width: "100%",

@@ -24,28 +24,34 @@ class PersonAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
 class ResearchInterestAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
     list_display = ('name',)
     exclude = ('pk',)
+    readonly_fields = ['alternatives']
     ordering = ['name']
     list_max_show_all = 500
 
 class InstituteAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
     list_display = ('name',)
     exclude = ('pk',)
+    readonly_fields = ['alternatives']
 
 class FacultyAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
     list_display = ('name',)
     exclude = ('pk',)
+    readonly_fields = ['alternatives']
 
 class DepartmentAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
     list_display = ('name',)
     exclude = ('pk',)
+    readonly_fields = ['alternatives']
 
 class RoleAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
     list_display = ('name',)
     exclude = ('pk',)
+    readonly_fields = ['alternatives']
 
 class ExpertiseAdmin(NoDeleteAdmin, django_admin.ModelAdmin):
     list_display = ('name',)
     exclude = ('pk',)
+    readonly_fields = ['alternatives']
     ordering = ['name']
     list_max_show_all = 500
 

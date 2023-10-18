@@ -46,7 +46,7 @@
                     {% endcomment %}
                     {% for suggestion in item.options %}
                     {% formatted_node_pk key suggestion.pk as id %}
-                    <option class="{{ item.class }}" value="{{ id }}" {% if id in selected_options %}selected {% endif %}>{{ suggestion.name }}</option>
+                    <option class="{{ item.class }}" value="{{ id }}" {% if id in selected_options %}selected {% endif %} data-alternatives="{% jsonify suggestion.alternatives %}">{{ suggestion.name }}</option>
                     {% endfor %}
                 </optgroup>
                 {% endfor %}
