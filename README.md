@@ -1,15 +1,47 @@
 # Expertise graph
 
-Website for visualizing expertise after converting the data
+Website for visualizing expertise and more
 
 # Manual
 
 ## Search and filter
 
+### Search
+
+* Enter search phrases
+* Entities (excluding person names etc.) that contain all of the phrases are matched
+
+### Filter
+
+* Select filters (exact match)
+* Using the data returned from the search, every row that fits the filters is shown
+* Filters in the same category are ORed, multiple categories are ANDed together
+* Exception: person + advisors and offered expertise + wanted expertise count as
+    one category each
+
+Filters `Person A, Advisor B, Interest C and Interest D` show all rows where
+* the person is A OR an advisor is B AND
+* C OR D are among the interests
+
 ## Graph
 
-* `Click` a node to load the graph for that node
-* `Click` + `Shift` to toggle the filter for that node
+* Click an empty space in the table row to load a graph for that person
+* Click a node to traverse the network
+* Click + Shift to toggle the filter for that node
+
+# Data guidelines
+
+* Node names that have a commonly used abbreviation should have the abbreviation saved in
+    the `alternatives` node property (or the long form as the alternative, if the
+    abbreviation is the name)
+* the same phrase should always be abbreviated or typed out (e.g. always "AI")
+* a person should be connected to a **topic of interest's** major supergroup, if they are
+    connected to a supergroup
+  * e.g. if connected to "Explainable AI" they should also be connected to "AI"
+  * other supergroups are "ML", "Big Data", "Optimization"
+* Institutions: the university, other major companies, ...
+* Faculties: university institutes, university faculties, centers, ...
+* Department: groups, departments, ...
 
 # Installation
 
@@ -38,7 +70,8 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
 
 4. Setup Neo4j
 
-    Run `cypher-shell`, login with user: neo4j and password: neo4j and set and remember a username and password.
+    Run `cypher-shell`, login with user: neo4j and password: neo4j and set and
+    remember a username and password.
 
 5. Create and activate a python virtual environment
 
@@ -135,14 +168,16 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     sudo certbot renew --dry-run
     ```
 
-12. Create a superuser `python ~/expertise/mysite/manage.py createsuperuser`. Log in to the admin page,
-    create a group with permissions for edit submissions. Create users and assign that group so they can approve.
+12. Create a superuser `python ~/expertise/mysite/manage.py createsuperuser`. Log in
+    to the admin page, create a group with permissions for edit submissions.
+    Create users and assign that group so they can approve.
 
 # Updating
 
 1. Stash changes if needed. Then get the changes with `git pull`.
 
-2. Apply the stashed changes. Set STATIC_ROOT and ALLOWED_HOSTS as seen in installation, if necessary. Then run
+2. Apply the stashed changes. Set STATIC_ROOT and ALLOWED_HOSTS as seen in installation,
+    if necessary. Then run
     ```
     python3 ~/expertise/mysite/manage.py makemigrations
     python3 ~/expertise/mysite/manage.py install_labels
