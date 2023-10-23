@@ -455,6 +455,9 @@ function prepareGraphData(apiData) {
  */
 function drawG6Graph(apiData, containerId, container){
     const data = prepareGraphData(apiData);
+    // make parallel edges draw properly
+    G6.Util.processParallelEdges(data.edges);
+
     // change this value instead of directly editing renderer and fitView properties
     const useCanvas = true;
     const height = 800;
