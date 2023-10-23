@@ -53,20 +53,30 @@ class ErrorDict(dict):
         else:
             self[field] = [error]
 
+def get_advisor_suggestions():
+    query = (
+        "MATCH (p:Person) "
+        "WHERE (p)<-[:ADVISED_BY]-() "
+        "RETURN p;"
+    )
+    results, _ = db.cypher_query(query, resolve_objects=True)
+    advisors = [row[0] for row in results]
+    return advisors
+
 def get_suggestions() -> dict:
     """returns data of all nodes
 
     the lists with persons and expertise contain all persons/expertise entries.
     this means that e.g. the offered expertise list can have an entry of an expertise node
-    that is only used as wanted expertise
+    that is only used as wanted expertise.
+    only the people that are actually advise someone are returned for advisors.
     """
-    person_nodes = Person.nodes.all()
     expertise_nodes = Expertise.nodes.all()
     suggestions = {
         "persons": {
             "class": "person",
             "group": "Persons",
-            "options": person_nodes,
+            "options": Person.nodes.all(),
         },
         "interests": {
             "class": "interest",
@@ -91,7 +101,7 @@ def get_suggestions() -> dict:
         "advisors": {
             "class": "person",
             "group": "Advisors",
-            "options": person_nodes,
+            "options": get_advisor_suggestions(),
         },
         "roles": {
             "class": "role",
@@ -187,7 +197,11 @@ def get_graph_data(node_id: str) -> dict:
     return graph_data
 
 def query_graph_data(node_id: str) -> tuple[set[Any], list[Any]] :
-    query = "MATCH (n1)-[r*1]-(n2) WHERE n1.pk=$id RETURN n1, r, n2"
+    query = (
+        "MATCH (n1)-[r*1]-(n2) "
+        "WHERE n1.pk=$id "
+        "RETURN n1, r, n2"
+    )
     results, _ = db.cypher_query(query, {"id": node_id})
     nodes = set()
     rels = []

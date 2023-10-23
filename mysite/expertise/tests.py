@@ -51,8 +51,10 @@ def create_group_and_user(test_case: TestCase) -> None:
 class IndexViewTestCase(TestCase):
     def setUp(self):
         clear_neo4j_database(db)
-        Person(title="Prof", name="Adviso").save()
-        Person(name="Person").save()
+        person1 = Person(title="Prof", name="Adviso").save()
+        person2 = Person(name="Ken").save()
+        person1.advisors.connect(person2)
+
         ResearchInterest(name="interest").save()
         Institute(name="institute").save()
         Faculty(name="faculty").save()
@@ -70,7 +72,10 @@ class IndexViewTestCase(TestCase):
         self.assertEqual(1, len(suggestions["institutes"]["options"]))
         self.assertEqual(1, len(suggestions["faculties"]["options"]))
         self.assertEqual(1, len(suggestions["departments"]["options"]))
-        self.assertEqual(2, len(suggestions["advisors"]["options"]))
+        # only the people who actually advise someone
+        self.assertEqual(1, len(suggestions["advisors"]["options"]))
+        self.assertEqual("Ken", suggestions["advisors"]["options"][0].name)
+
         self.assertEqual(1, len(suggestions["roles"]["options"]))
         self.assertEqual(2, len(suggestions["offered_expertise"]["options"]))
         self.assertEqual(2, len(suggestions["wanted_expertise"]["options"]))
