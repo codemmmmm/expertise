@@ -9,6 +9,11 @@
     --color-search: #e4e4e4; /* for the search/history optgroup */
 }
 
+html, body {
+    height: 100vh;
+    margin: 0;
+}
+
 .navbar-dark .navbar-nav .nav-link {
     color: rgba(255, 255, 255, 0.85);
 }
@@ -30,10 +35,10 @@ form.home {
     filter: brightness(120%);
 }
 
-div.table-responsive.persons-table-container {
-    overflow: auto;
-    /* maybe min(...) would be better */
-    max-height: 550px;
+div.content-no-scroll {
+    display: flex;
+    flex-direction: column;
+    height: 90vh;
 }
 
 table.table.persons-table th {
