@@ -35,10 +35,12 @@ Filters `Person A, Advisor B, Interest C and Interest D` show all rows where
     the `alternatives` node property (or the long form as the alternative, if the
     abbreviation is the name)
 * the same phrase should always be abbreviated or typed out (e.g. always "AI")
+* American English probably
 * a person should be connected to a **topic of interest's** major supergroup, if they are
     connected to a supergroup
   * e.g. if connected to "Explainable AI" they should also be connected to "AI"
   * other supergroups are "ML", "Big Data", "Optimization"
+  * currently isn't done for expertise, but might be done later
 * Institutions: the university, other major companies, ...
 * Faculties: university institutes, university faculties, centers, ...
 * Department: groups, departments, ...
