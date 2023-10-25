@@ -85,7 +85,7 @@ class IndexViewTestCase(TestCase):
         suggestions = response.context["suggestions"]
 
         for key in suggestions:
-            self.assertIn("group", suggestions[key])
+            self.assertIn("group_name", suggestions[key])
             self.assertIn("options", suggestions[key])
 
     def test_used_template(self):
