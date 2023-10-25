@@ -679,6 +679,7 @@ def graph_api(request):
     return JsonResponse(data)
 
 def shorten(request):
+    """use database's primary key to 'encode' the shared parameters"""
     if request.method == "POST":
         data = json.loads(request.body)
         parameters = data.get("parameters")
