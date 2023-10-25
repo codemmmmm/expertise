@@ -57,42 +57,49 @@ class EditForm(forms.Form):
         widget=forms.TextInput(attrs={"class": "form-control"})
     )
 
-    widget = forms.SelectMultiple(attrs={"class": "form-select"})
     interests = MultipleChoiceAndNewField(
         label="Topics of interest",
         required=False,
-        widget=widget)
+        widget=forms.SelectMultiple(attrs={"class": "form-select interest"})
+    )
     institutes = MultipleChoiceAndNewField(
         label="Institution",
         required=False,
         help_text="Universities, research institutions, ...",
-        widget=widget)
+        widget=forms.SelectMultiple(attrs={"class": "form-select institute"})
+    )
     faculties = MultipleChoiceAndNewField(
         label="Faculty, center",
         required=False,
         help_text="University institutes, university faculties, centers, ...",
-        widget=widget)
+        widget=forms.SelectMultiple(attrs={"class": "form-select faculty"})
+    )
     departments = MultipleChoiceAndNewField(
         label="Department, group",
         required=False,
         help_text="Departments, groups, chairs, ...",
-        widget=widget)
+        widget=forms.SelectMultiple(attrs={"class": "form-select department"})
+    )
     advisors = MultipleChoiceAndNewField(
         label="Advisor",
         required=False,
-        widget=widget)
+        widget=forms.SelectMultiple(attrs={"class": "form-select person"})
+    )
     roles = MultipleChoiceAndNewField(
         label="Role in ScaDS.AI",
         required=False,
-        widget=widget)
+        widget=forms.SelectMultiple(attrs={"class": "form-select role"})
+    )
     offered = MultipleChoiceAndNewField(
         label="Offered expertise",
         required=False,
-        widget=widget)
+        widget=forms.SelectMultiple(attrs={"class": "form-select expertise"})
+    )
     wanted = MultipleChoiceAndNewField(
         label="Wanted expertise",
         required=False,
-        widget=widget)
+        widget=forms.SelectMultiple(attrs={"class": "form-select expertise"})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

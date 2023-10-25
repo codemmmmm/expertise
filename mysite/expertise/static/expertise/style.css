@@ -63,36 +63,42 @@ table.table.persons-table thead th {
 td:nth-child(2)>button,
 td:nth-child(7)>button,
 .select2-container ul.select2-selection__rendered>li.person,
+select.person + span.select2-container ul.select2-selection__rendered>li,
 strong.select2-results__group.person {
     background-color: var(--color-person);
 }
 
 td:nth-child(3)>button,
 .select2-container ul.select2-selection__rendered>li.interest,
+select.interest+span.select2-container ul.select2-selection__rendered>li,
 strong.select2-results__group.interest {
     background-color: var(--color-interest);
 }
 
 td:nth-child(4)>button,
 .select2-container ul.select2-selection__rendered>li.institute,
+select.institute+span.select2-container ul.select2-selection__rendered>li,
 strong.select2-results__group.institute {
     background-color: var(--color-institute);
 }
 
 td:nth-child(5)>button,
 .select2-container ul.select2-selection__rendered>li.faculty,
+select.faculty+span.select2-container ul.select2-selection__rendered>li,
 strong.select2-results__group.faculty {
     background-color: var(--color-faculty);
 }
 
 td:nth-child(6)>button,
 .select2-container ul.select2-selection__rendered>li.department,
+select.department+span.select2-container ul.select2-selection__rendered>li,
 strong.select2-results__group.department {
     background-color: var(--color-department);
 }
 
 td:nth-child(8)>button,
 .select2-container ul.select2-selection__rendered>li.role,
+select.role+span.select2-container ul.select2-selection__rendered>li,
 strong.select2-results__group.role {
     background-color: var(--color-role);
 }
@@ -100,6 +106,7 @@ strong.select2-results__group.role {
 td:nth-child(9)>button,
 td:nth-child(10)>button,
 .select2-container ul.select2-selection__rendered>li.expertise,
+select.expertise+span.select2-container ul.select2-selection__rendered>li,
 strong.select2-results__group.expertise {
     background-color: var(--color-expertise);
 }
