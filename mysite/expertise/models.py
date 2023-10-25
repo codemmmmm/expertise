@@ -29,8 +29,8 @@ class Faculty(DjangoNode):
 
     class Meta:
         app_label = "expertise"
-        verbose_name = "faculty/center"
-        verbose_name_plural = "faculties/centers"
+        verbose_name = "faculty/institute/center"
+        verbose_name_plural = "faculties/institutes/centers"
 
 class Department(DjangoNode):
     name = StringProperty(unique_index=True, required=True, max_length=200)

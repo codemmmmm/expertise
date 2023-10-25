@@ -39,7 +39,7 @@
                 <select class="form-select search-filter" multiple="multiple" name="filters[]" autofocus autocomplete="off">
                     <optgroup class="search" label="Search history"></optgroup>
                     {% for key, item in suggestions.items %}
-                    <optgroup class="{{ item.class }}" label="{{ item.group }}">
+                    <optgroup class="{{ item.class }}" label="{{ item.group_name }}">
                         {% comment %}
                             the pk is prefixed so select2 can distinguish between
                             e.g. offered and wanted expertise which can be the same node
@@ -80,14 +80,14 @@
                 <tr>
                     <th scope="col"><span class="visually-hidden">Email</span></th>
                     <th scope="col" class="person">Name</th>
-                    <th scope="col" class="interest">Research interest</th>
-                    <th scope="col" class="institute">Institute</th>
-                    <th scope="col" class="faculty">Faculty</th>
-                    <th scope="col" class="department">Department</th>
+                    <th scope="col" class="interest">Topics of Interest</th>
+                    <th scope="col" class="institute">Institution</th>
+                    <th scope="col" class="faculty">Faculty, Center</th>
+                    <th scope="col" class="department">Department, Group</th>
                     <th scope="col" class="person">Advisor</th>
                     <th scope="col" class="role">Role in ScaDS.AI</th>
-                    <th scope="col" class="expertise">Offered expertise</th>
-                    <th scope="col" class="expertise">Wanted expertise</th>
+                    <th scope="col" class="expertise">Offered Expertise</th>
+                    <th scope="col" class="expertise">Wanted Expertise</th>
                 </tr>
             </thead>
             <tbody>

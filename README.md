@@ -34,9 +34,10 @@ Filters `Person A, Advisor B, Interest C and Interest D` show all rows where
 * Node names that have a commonly used abbreviation should have the abbreviation saved in
     the `alternatives` node property (or the long form as the alternative, if the
     abbreviation is the name)
-* the same phrase should always be abbreviated or typed out (e.g. always "AI")
+* The same phrase should always be abbreviated or typed out (e.g. always "AI")
 * American English probably
-* a person should be connected to a **topic of interest's** major supergroup, if they are
+* Everything capitalized besides "stop words" and verbs after a "-"
+* A person should be connected to a **topic of interest's** major supergroup, if they are
     connected to a supergroup
   * e.g. if connected to "Explainable AI" they should also be connected to "AI"
   * other supergroups are "ML", "Big Data", "Optimization"
@@ -45,6 +46,13 @@ Filters `Person A, Advisor B, Interest C and Interest D` show all rows where
 * Faculties: university institutes, university faculties, centers, ...
   * "Institute ..." not abbreviated
 * Department: groups, departments, ...
+* Not many new roles should be entered
+
+## Change label (category) names
+
+* table headers in index.html
+* "group_name" in get_suggestions() in views.py
+* form field labels and helptext in forms.py
 
 # Installation
 

@@ -75,47 +75,47 @@ def get_suggestions() -> dict:
     suggestions = {
         "persons": {
             "class": "person",
-            "group": "Persons",
+            "group_name": "Persons",
             "options": Person.nodes.all(),
         },
         "interests": {
             "class": "interest",
-            "group": "Interests",
+            "group_name": "Topics of Interest",
             "options": ResearchInterest.nodes.all(),
         },
         "institutes": {
             "class": "institute",
-            "group": "Institutes",
+            "group_name": "Institutions",
             "options": Institute.nodes.all(),
         },
         "faculties": {
             "class": "faculty",
-            "group": "Faculties",
+            "group_name": "Faculties, Centers",
             "options": Faculty.nodes.all(),
         },
         "departments": {
             "class": "department",
-            "group": "Departments",
+            "group_name": "Departments, Groups",
             "options": Department.nodes.all(),
         },
         "advisors": {
             "class": "person",
-            "group": "Advisors",
+            "group_name": "Advisors",
             "options": get_advisor_suggestions(),
         },
         "roles": {
             "class": "role",
-            "group": "Roles",
+            "group_name": "Roles",
             "options": Role.nodes.all(),
         },
         "offered_expertise": {
             "class": "expertise",
-            "group": "Offered expertise",
+            "group_name": "Offered Expertise",
             "options": expertise_nodes,
         },
         "wanted_expertise": {
             "class": "expertise",
-            "group": "Wanted expertise",
+            "group_name": "Wanted Expertise",
             "options": expertise_nodes,
         },
     }

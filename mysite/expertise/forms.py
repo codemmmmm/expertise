@@ -45,7 +45,7 @@ class EditForm(forms.Form):
         label="Email address",
         required=True,
         max_length=50,
-        help_text="Please enter your institute email.",
+        help_text="Please enter your institution email.",
         widget=forms.EmailInput(attrs={
             "class": "form-control",
             "aria-describedby": "id_email_helptext"})
@@ -58,14 +58,41 @@ class EditForm(forms.Form):
     )
 
     widget = forms.SelectMultiple(attrs={"class": "form-select"})
-    interests = MultipleChoiceAndNewField(label="Research interests", required=False, widget=widget)
-    institutes = MultipleChoiceAndNewField(label="Institute", required=False, widget=widget)
-    faculties = MultipleChoiceAndNewField(label="Faculty", required=False, widget=widget)
-    departments = MultipleChoiceAndNewField(label="Department", required=False, widget=widget)
-    advisors = MultipleChoiceAndNewField(label="Advisor", required=False, widget=widget)
-    roles = MultipleChoiceAndNewField(label="Role in ScaDS.AI", required=False, widget=widget)
-    offered = MultipleChoiceAndNewField(label="Offered expertise", required=False, widget=widget)
-    wanted = MultipleChoiceAndNewField(label="Wanted expertise", required=False, widget=widget)
+    interests = MultipleChoiceAndNewField(
+        label="Topics of interest",
+        required=False,
+        widget=widget)
+    institutes = MultipleChoiceAndNewField(
+        label="Institution",
+        required=False,
+        help_text="Universities, research institutions, ...",
+        widget=widget)
+    faculties = MultipleChoiceAndNewField(
+        label="Faculty, center",
+        required=False,
+        help_text="University institutes, university faculties, centers, ...",
+        widget=widget)
+    departments = MultipleChoiceAndNewField(
+        label="Department, group",
+        required=False,
+        help_text="Departments, groups, chairs, ...",
+        widget=widget)
+    advisors = MultipleChoiceAndNewField(
+        label="Advisor",
+        required=False,
+        widget=widget)
+    roles = MultipleChoiceAndNewField(
+        label="Role in ScaDS.AI",
+        required=False,
+        widget=widget)
+    offered = MultipleChoiceAndNewField(
+        label="Offered expertise",
+        required=False,
+        widget=widget)
+    wanted = MultipleChoiceAndNewField(
+        label="Wanted expertise",
+        required=False,
+        widget=widget)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
