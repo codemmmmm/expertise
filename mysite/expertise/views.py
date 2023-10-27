@@ -272,12 +272,14 @@ def try_update_or_create_person(person: Person, data: dict[str, str | Sequence[s
     person.save()
     return person
 
-def is_same_string_or_list(data1: str | Sequence[str], data2: str | Sequence[str]) -> bool:
+def is_same_string_or_list(data1: str | Sequence[str] | None, data2: str | Sequence[str]) -> bool:
     """
     Args:
         data1 (str | Sequence[str]): should not be a list with duplicates
         data2 (str | Sequence[str]): should not be a list with duplicates
     """
+    if data1 is None:
+        return False
     if isinstance(data1, str):
         return data1 == data2
     return set(data1) == set(data2)
@@ -304,7 +306,7 @@ def get_submission_or_none(person: Person) -> EditSubmission | None:
         Q(person_email_new=person.email) & Q(person_name_new=person.name)
         ).first()
 
-def save_submission(person: Person, data: dict[str, str | Sequence[str]]) -> None:
+def save_submission(person: Person, data: dict[str, str | Sequence[str]], action) -> None:
     """save the submission to the relational database for later approval
 
     Args:
@@ -331,7 +333,7 @@ def save_submission(person: Person, data: dict[str, str | Sequence[str]]) -> Non
         submission.person_id_new = person.pk
 
         old_data = get_person_data(person)
-        if is_same_data(data, old_data):
+        if is_same_data(data, old_data) and not action == "delete":
             # if a submission was changed again in a way that there is no difference between
             # the old data and the submission's data, the submission is deleted and not
             # just not submitted
@@ -350,6 +352,7 @@ def save_submission(person: Person, data: dict[str, str | Sequence[str]]) -> Non
 
     if not submission.person_email:
         submission.person_email = ""
+    submission.action = action
     submission.save()
 
 def get_person_data(person: Person) -> dict[str, str | Sequence[str]]:
@@ -432,13 +435,19 @@ def get_submissions_forms(submissions: Sequence[EditSubmission]) -> Sequence[dic
         old_form = EditForm(initial=old_data, prefix=str(submission.id) + "old")
         for field in old_form:
             field.field.disabled = True
-        new_form = EditForm(initial=new_data, prefix=str(submission.id) + "new")
-        add_missing_select_options(new_form)
+        if submission.action == "delete":
+            new_form = EditForm(initial={}, prefix=str(submission.id) + "new")
+            for field in new_form:
+                field.field.disabled = True
+        else:
+            new_form = EditForm(initial=new_data, prefix=str(submission.id) + "new")
+            add_missing_select_options(new_form)
 
         submission_data = {
             "data": list(zip(new_form, old_form)), # order of new, old is important
             "id": submission.id,
             "header": get_form_couple_header(new_data, old_data),
+            "action": submission.action,
         }
         # set attribute for marking changed data
         for new_field, old_field in submission_data["data"]:
@@ -536,6 +545,7 @@ def edit(request):
     errors = ErrorDict()
     if request.method == "POST":
         person_id = request.POST.get("personId")
+        action = request.POST.get("action")
         form = EditForm(request.POST)
         if not form.is_valid():
             return HttpResponse(form.errors.as_json(), content_type="application/json", status=422)
@@ -546,6 +556,11 @@ def edit(request):
             # means that someone manipulated the hidden value or the person was somehow deleted
             errors.add_error(None, "Sorry, the selected person was not found. Please reload the page.")
             return JsonResponse(errors, status=400)
+
+        if action == "delete":
+            if not person:
+                # quietly discard the submission
+                return JsonResponse({})
 
         db.begin()
         # if the exception cause is properly detected for error messages then the two try blocks can be merged
@@ -558,6 +573,7 @@ def edit(request):
 
             errors.add_error("email", trim_error(str(e)), str(e)) # or invalid email?
             return JsonResponse(errors, status=422)
+
         try:
             change_connected(person, data)
         except NeomodelException as e:
@@ -574,7 +590,7 @@ def edit(request):
             pass
 
         try:
-            save_submission(person, data)
+            save_submission(person, data, action)
         except IntegrityError as e:
             message = str(e).lower()
             # should two same emails be accepted for submissions?
@@ -604,18 +620,19 @@ def edit(request):
 @permission_required("expertise.change_editsubmission")
 def approve(request):
     if request.method == "POST":
+        decision = request.POST.get("decision")
         action = request.POST.get("action")
         submission_id = request.POST.get("submissionId")
         errors = ErrorDict()
-        if not action or not submission_id or action not in ("approve", "reject"):
+        if not decision or not submission_id or decision not in ("approve", "reject"):
             errors.add_error(None, "Sorry, something went wrong. Please reload the page.")
             return JsonResponse(get_error_response_data(errors, submission_id), status=400)
 
         submission = EditSubmission.objects.filter(pk=submission_id).first()
-        if action == "reject":
+        if decision == "reject":
             if submission:
                 log = (
-                    f"REJECTED submission by {request.user}:{request.user.id} "
+                    f"REJECTED submission to {submission.action} by {request.user}:{request.user.id} "
                     f"with REQUEST data = {stringify_edit_submission_post(request.POST)}"
                 )
                 logger.info(log)
@@ -627,19 +644,32 @@ def approve(request):
         if not submission:
             errors.add_error(None, "Sorry, the requested entry was not found. Please reload the page.")
             return JsonResponse(get_error_response_data(errors, submission_id), status=400)
+
+        person = Person.nodes.get_or_none(pk=submission.person_id)
+        if person:
+            data_before_change = get_person_data(person)
+        else:
+            data_before_change = "[person was created by this operation]"
+
+        if action == "delete":
+            log = (
+                f"approved submission by {request.user}:{request.user.id} "
+                f"to DELETE person with PREVIOUS data = {data_before_change}"
+            )
+            logger.info(log)
+            submission.delete()
+            if person:
+                person.delete()
+            return JsonResponse({ "id": submission_id })
+
         form = EditForm(request.POST, prefix=submission_id + "new")
         if not form.is_valid():
             return HttpResponse(form.errors.as_json(), content_type="application/json", status=422)
         try:
-            person = Person.nodes.get_or_none(pk=submission.person_id)
-            if person:
-                data_before_change = get_person_data(person)
-            else:
-                data_before_change = "[person was created by this operation]"
             apply_submission(person, submission, form.cleaned_data)
             log = (
-                f"APPROVED submission by {request.user}:{request.user.id} "
-                f"with REQUEST data = {stringify_edit_submission_post(request.POST)} "
+                f"approved submission by {request.user}:{request.user.id} "
+                f"to EDIT with REQUEST data = {stringify_edit_submission_post(request.POST)} "
                 f"and PREVIOUS data = {data_before_change}"
             )
             logger.info(log)

@@ -130,6 +130,14 @@ def default_list() -> list[str]:
     return []
 
 class EditSubmission(models.Model):
+    action = models.CharField(
+        max_length=30,
+        choices=[
+            ("edit", "edit"),
+            ("delete", "delete")
+        ],
+        null=False,
+    )
     person_id = models.CharField(max_length=30, null=True, unique=True)
     person_id_new = models.CharField(max_length=30, null=True, unique=True, blank=False)
     person_name = models.CharField(max_length=80, default="", null=False)

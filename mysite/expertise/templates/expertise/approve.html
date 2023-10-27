@@ -14,9 +14,13 @@
     <div class="accordion-item">
         <h2 class="accordion-header" id="heading{{ form_couple.id }}">
             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ form_couple.id }}" aria-expanded="true" aria-controls="collapse{{ form_couple.id }}">
-                {{ form_couple.header.0 }}
-                {% if form_couple.header.1 != "," %}
-                &nbsp;<span class="fw-bold">⟵</span>&nbsp; {{ form_couple.header.1 }}
+                {% if form_couple.action == "delete" %}
+                    <span class="text-decoration-line-through">{{ form_couple.header.1 }}</span>
+                {% else %}
+                    {{ form_couple.header.0 }}
+                    {% if form_couple.header.1 != "," %}
+                    &nbsp;<span class="fw-bold">⟵</span>&nbsp; {{ form_couple.header.1 }}
+                    {% endif %}
                 {% endif %}
             </button>
         </h2>
@@ -25,6 +29,7 @@
             <form class="pb-3 mt-3 approve" autocomplete="off">
                 {% csrf_token %}
                 <input type="hidden" name="submissionId" value="{{ form_couple.id }}">
+                <input type="hidden" name="action" value="{{ form_couple.action }}">
                 {% for field_couple in form_couple.data %}
                 <div class="row">
                     {% for field in field_couple %}
@@ -38,8 +43,12 @@
                     {% endfor %}
                 </div>
                 {% endfor %}
-                <button type="submit" name="action" value="approve" class="btn btn-primary me-3">Approve change</button>
-                <button type="submit" name="action" value="reject" class="btn btn-secondary">Reject change</button>
+                {% if form_couple.action == "delete" %}
+                <button type="submit" name="decision" value="approve" class="btn btn-danger me-3">Delete person</button>
+                {% else %}
+                <button type="submit" name="decision" value="approve" class="btn btn-primary me-3">Approve change</button>
+                {% endif %}
+                <button type="submit" name="decision" value="reject" class="btn btn-secondary">Reject change</button>
             </form>
         </div>
     </div>

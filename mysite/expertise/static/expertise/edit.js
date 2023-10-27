@@ -19,8 +19,8 @@ function alertAndRedirect(form) {
     form.onSubmit = (e) => {
         e.preventDefault();
     };
-    const button = form.querySelector("button[type='submit']");
-    button.disabled = true;
+    const buttons = form.querySelectorAll("button[type='submit']");
+    buttons.forEach((button) => button.disabled = true );
     const container = document.createElement("div");
     const alert = document.createElement("div");
     alert.className = "alert alert-success mt-3 d-inline-block";
@@ -31,7 +31,7 @@ function alertAndRedirect(form) {
     container.scrollIntoView();
     setTimeout(() => {
         window.location.assign("/expertise/");
-    }, 3000);
+    }, 2500);
 }
 
 async function submitEdit(postData) {

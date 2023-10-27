@@ -251,7 +251,7 @@ def get_submission_from_person_id(person_id: str) -> EditSubmission:
 def get_submission_from_person_email(email: str, name: str) -> EditSubmission:
     return EditSubmission.objects.get(person_email_new=email, person_name_new=name)
 
-def get_post_data(submission: EditSubmission, action) -> dict[str, str | Sequence[str]]:
+def get_post_data(submission: EditSubmission, decision) -> dict[str, str | Sequence[str]]:
     property_and_key_names = (
         ("person_name", "name"),
         ("person_email", "email"),
@@ -269,7 +269,7 @@ def get_post_data(submission: EditSubmission, action) -> dict[str, str | Sequenc
     for property_name, key in property_and_key_names:
         prefixed_key = str(submission.id) + "new-" + key
         post_data[prefixed_key] = getattr(submission, property_name + "_new")
-    post_data["action"] = action
+    post_data["decision"] = decision
     post_data["submissionId"] = submission.id
     return post_data
 
@@ -361,6 +361,7 @@ class EditTestCase(TestCase):
         person1.wanted_expertise.connect(wanted_exp)
 
         post_data = {
+            "action": "edit",
             "personId": person1.pk,
             "name": person1.name,
             "email": "b@b.com",
@@ -395,6 +396,7 @@ class EditTestCase(TestCase):
         person.wanted_expertise.connect(wanted_exp)
 
         post_data = {
+            "action": "edit",
             "personId": person.pk,
             "name": person.name,
             "email": person.email,
@@ -429,6 +431,7 @@ class EditTestCase(TestCase):
         self.user.groups.add(self.group)
         self.client.login(username=self.user.username, password=self.password)
         post_data = {
+            "action": "edit",
             "personId": "",
             "name": "new person",
             "email": "a@a.com",
@@ -450,6 +453,7 @@ class EditTestCase(TestCase):
         person2 = Person(name="rock", email="b@b.com").save()
 
         post_data = {
+            "action": "edit",
             "personId": "",
             "name": "new name",
             "email": "a@a.com",
@@ -459,6 +463,7 @@ class EditTestCase(TestCase):
         self.assertIn("property `email`", response.json()["email"][0]["message"])
 
         post_data = {
+            "action": "edit",
             "personId": person2.pk,
             "name": person2.name,
             "email": "a@a.com",
@@ -474,6 +479,7 @@ class EditTestCase(TestCase):
         self.client.login(username=self.user.username, password=self.password)
         person = Person(name="Jake", email="a@a.com", title="title").save()
         post_data = {
+            "action": "edit",
             "personId": person.pk,
             "name": person.name,
             "email": person.email,
@@ -490,6 +496,7 @@ class EditTestCase(TestCase):
     def test_invalid_form(self):
         # TODO: test with incorrect personId?
         post_data = {
+            "action": "edit",
             "personId": "person name",
         }
         response = self.client.post("/expertise/edit", post_data)
@@ -503,6 +510,7 @@ class EditTestCase(TestCase):
         self.user.groups.add(self.group)
         self.client.login(username=self.user.username, password=self.password)
         post_data = {
+            "action": "edit",
             "personId": "",
             "name": "new person",
             "email": "a@a.com",
@@ -510,6 +518,7 @@ class EditTestCase(TestCase):
         }
         self.client.post("/expertise/edit", post_data)
         post_data = {
+            "action": "edit",
             "personId": "",
             "name": "other name",
             "email": "b@b.com",
@@ -539,6 +548,7 @@ class EditTestCase(TestCase):
         interest = ResearchInterest(name="new interest").save()
         institute = Institute(name="new institute").save()
         post_data = {
+            "action": "edit",
             "personId": "",
             "name": "new person",
             "email": "a@a.com",
@@ -613,6 +623,7 @@ class EditSubmissionTestCase(TestCase):
     def test_get_submission_existing_person(self):
         person = Person(name="Jake", email="a@a.com").save()
         post_data = {
+            "action": "edit",
             "personId": person.pk,
             "name": person.name,
             "email": person.email,
@@ -625,6 +636,7 @@ class EditSubmissionTestCase(TestCase):
     def test_get_submission_existing_person_email_change(self):
         person = Person(name="Jake", email="a@a.com").save()
         post_data = {
+            "action": "edit",
             "personId": person.pk,
             "name": person.name,
             "email": "b@b.com",
@@ -639,6 +651,7 @@ class EditSubmissionTestCase(TestCase):
         name = "Jake"
         email = "a@a.com"
         post_data = {
+            "action": "edit",
             "personId": "",
             "name": name,
             "email": email,
@@ -679,7 +692,7 @@ class EditSubmissionTestCase(TestCase):
 
         form = EditForm(data)
         form.is_valid()
-        save_submission(person1, form.cleaned_data)
+        save_submission(person1, form.cleaned_data, "edit")
         submission = EditSubmission.objects.first()
         self.assertEqual(submission.person_id, person1.pk)
         self.assertEqual(submission.person_id_new, person1.pk)
@@ -699,7 +712,7 @@ class EditSubmissionTestCase(TestCase):
         }
         form = EditForm(data)
         form.is_valid()
-        save_submission(person1, form.cleaned_data)
+        save_submission(person1, form.cleaned_data, "edit")
         submission = EditSubmission.objects.first()
         self.assertEqual(submission.institutes_new, [])
 
@@ -717,7 +730,48 @@ class EditSubmissionTestCase(TestCase):
 
         form = EditForm(data)
         form.is_valid()
-        save_submission(person1, form.cleaned_data)
+        save_submission(person1, form.cleaned_data, "edit")
+        self.assertEqual(len(EditSubmission.objects.all()), 0)
+
+    def test_deletion_submission(self):
+        self.user.groups.add(self.group)
+        self.client.login(username=self.user.username, password=self.password)
+
+        person1 = Person(name="Jake", email="a@a.com").save()
+        exp1 = Expertise(name="expertise").save()
+        exp2 = Expertise(name="expertise 2").save()
+        person1.offered_expertise.connect(exp1)
+        person1.offered_expertise.connect(exp2)
+        data = {
+            "name": person1.name,
+            "email": person1.email,
+            "offered": [exp1.pk, exp2.pk],
+        }
+
+        form = EditForm(data)
+        form.is_valid()
+        save_submission(person1, form.cleaned_data, "delete")
+        self.assertEqual(len(EditSubmission.objects.all()), 1)
+        self.assertEqual(EditSubmission.objects.first().action, "delete")
+
+        submission = get_submission_from_person_id(person1.pk)
+        submission_data = get_post_data(submission, "approve")
+        submission_data["action"] = "delete"
+        self.client.post("/expertise/approve", submission_data)
+        self.assertIsNone(Person.nodes.get_or_none(pk=person1.pk))
+
+    def test_deletion_new_person(self):
+        """trying to delete a new person should not create an edit submission"""
+        exp1 = Expertise(name="expertise").save()
+        exp2 = Expertise(name="expertise 2").save()
+        data = {
+            "action": "delete",
+            "name": "Jake",
+            "email": "a@a.com",
+            "offered": [exp1.pk, exp2.pk],
+        }
+
+        self.client.post("/expertise/edit", data)
         self.assertEqual(len(EditSubmission.objects.all()), 0)
 
     def test_change_existing_submission_existing_person(self):
@@ -735,7 +789,7 @@ class EditSubmissionTestCase(TestCase):
 
         form = EditForm(data)
         form.is_valid()
-        save_submission(person1, form.cleaned_data)
+        save_submission(person1, form.cleaned_data, "edit")
 
         # change previous submission
         data = {
@@ -746,7 +800,7 @@ class EditSubmissionTestCase(TestCase):
 
         form = EditForm(data)
         form.is_valid()
-        save_submission(person1, form.cleaned_data)
+        save_submission(person1, form.cleaned_data, "edit")
         submissions = EditSubmission.objects.all()
         self.assertEqual(len(submissions), 1)
         submission = submissions.first()
@@ -755,7 +809,8 @@ class EditSubmissionTestCase(TestCase):
         self.assertCountEqual(submission.offered_new, [exp1.pk, exp2.pk])
 
     def test_change_existing_submission_existing_person_no_difference(self):
-        person1 = Person(name="Jake", email="a@a.com").save()
+        name = "Jake"
+        person1 = Person(name=name, email="a@a.com").save()
         exp1 = Expertise(name="expertise").save()
         exp2 = Expertise(name="expertise 2").save()
         person1.offered_expertise.connect(exp1)
@@ -769,18 +824,18 @@ class EditSubmissionTestCase(TestCase):
 
         form = EditForm(data)
         form.is_valid()
-        save_submission(person1, form.cleaned_data)
+        save_submission(person1, form.cleaned_data, "edit")
 
         # change previous submission
         data = {
-            "name": "Jake", # original name
+            "name": name,
             "email": person1.email,
             "offered": [exp1.pk, exp2.pk],
         }
 
         form = EditForm(data)
         form.is_valid()
-        save_submission(person1, form.cleaned_data)
+        save_submission(person1, form.cleaned_data, "edit")
         submissions = EditSubmission.objects.all()
         self.assertEqual(len(submissions), 0)
 
@@ -789,6 +844,7 @@ class EditSubmissionTestCase(TestCase):
         exp1 = Expertise(name="expertise").save()
         # new submission without saving nodes
         post_data = {
+            "action": "edit",
             "name": "Jake",
             "email": "test@test.de",
             "offered": [exp1.pk, "exp2"],
@@ -801,6 +857,7 @@ class EditSubmissionTestCase(TestCase):
 
         # change previous submission
         post_data = {
+            "action": "edit",
             "name": "Jake",
             "email": "test@test.de",
             "offered": ["exp2"],
@@ -817,6 +874,7 @@ class EditSubmissionTestCase(TestCase):
         """test edit submission for a person who didn't have an email set"""
         person = Person(name="Hans").save()
         post_data = {
+            "action": "edit",
             "personId": person.pk,
             "name": person.name,
             "email": "test@test.de",
@@ -834,6 +892,7 @@ class EditSubmissionTestCase(TestCase):
         person.offered_expertise.connect(exp1)
         person.offered_expertise.connect(exp2)
         post_data = {
+            "action": "edit",
             "personId": person.pk,
             "name": person.name,
             "email": person.email,
@@ -842,6 +901,7 @@ class EditSubmissionTestCase(TestCase):
         self.client.post("/expertise/edit", post_data)
 
         post_data = {
+            "action": "edit",
             "personId": "",
             "name": "Lisa",
             "email": "test@test.de",
@@ -875,6 +935,7 @@ class EditSubmissionTestCase(TestCase):
         person = Person(name="Jake", email="a@a.com").save()
         exp1 = Expertise(name="expertise").save()
         post_data = {
+            "action": "edit",
             "personId": person.pk,
             "name": person.name,
             "email": person.email,
