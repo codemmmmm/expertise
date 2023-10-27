@@ -22,11 +22,11 @@ function removeAccordionItem(id) {
     accordionItem.remove();
 }
 
-async function submitSubmission(post_data) {
+async function submitSubmission(postData) {
     const url = "approve";
     const response = await fetch(url, {
         method: "POST",
-        body: post_data,
+        body: postData,
     });
     if (response.ok) {
         const data = await response.json();

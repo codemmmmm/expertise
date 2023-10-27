@@ -34,11 +34,11 @@ function alertAndRedirect(form) {
     }, 3000);
 }
 
-async function submitEdit(post_data) {
-    const url = "edit-form";
+async function submitEdit(postData) {
+    const url = "edit";
     const response = await fetch(url, {
         method: "POST",
-        body: post_data,
+        body: postData,
     });
     const form = document.querySelector("form.edit");
     if (response.ok) {
@@ -56,83 +56,46 @@ async function submitEdit(post_data) {
 function edit(e) {
     e.preventDefault();
     const form = document.querySelector("form.edit");
-    const data = new FormData(form);
+    const submitter = e.submitter || form.querySelector("button#edit");
+    const data = new FormData(form, submitter);
+
+    if (submitter.value === "delete") {
+        const message = `Do you want to request the deletion of ${data.get("name")}'s data?`;
+        if (!window.confirm(message)) {
+            return false;
+        }
+    }
     hideErrorAlert(form);
     hideFormErrors(form);
-    // TODO: sucess message? / loading spinner
     submitEdit(data).catch((error) => {
         showErrorAlert(form, error);
     });
-}
-
-function initEdit() {
-    const button = document.querySelector("button[type='submit']");
-    button.textContent = "Submit for approval";
-    const form = document.querySelector("form");
-    form.removeEventListener("submit", search);
-    form.addEventListener("submit", edit);
 }
 
 function copyPersonId(e) {
     const button = e.currentTarget;
     writeToClipboard(button, async () => {
         const input = document.querySelector("input[name='personId']");
-        return Promise(input.value);
+        return input.value;
     });
 }
 
 function initCopyButton() {
     const clipboardEl = document.querySelector("button.clipboard-button");
     const nameContainer = document.querySelector("#id_name").parentNode;
-    // move it to the intended position because the full form was loaded
-    nameContainer.querySelector("label").insertAdjacentElement("afterend", clipboardEl);
+    // move it to the name field
+    nameContainer.querySelector("label")
+        .insertAdjacentElement("afterend", clipboardEl);
     clipboardEl.classList.remove("d-none");
     clipboardEl.addEventListener("click", copyPersonId);
 }
 
-async function loadFullForm(selectedPerson) {
-    const url = "edit-form";
-    const form = document.querySelector("form");
-    hideErrorAlert(form);
-    const response = await fetch(`${url}?id=${encodeURIComponent(selectedPerson.id)}`);
-    if (!response.ok) {
-        const message = `An error has occured: ${response.status}`;
-        throw new Error(message);
-    }
-    const html = await response.text();
-    // TODO: check if XSS is possible, e.g. in title
-
-    const personName = selectedPerson.text;
-    form.querySelector("div.person-select").remove();
-    form.insertAdjacentHTML("afterbegin", html);
-    const nameInput = form.querySelector("input[name='name']");
-    nameInput.value ||= personName;
-    initMultiSelects();
-    initEdit();
-    // only enable copy button if the person was already created and thus has an ID
-    if (document.querySelector("input[name='personId']").value) {
-        initCopyButton();
-    }
+// to copy the id of an existing person
+if (document.querySelector("input[name='personId']").value) {
+    initCopyButton();
 }
 
-function search(e) {
-    e.preventDefault();
-    const form = e.target;
-    const selection = $("#name").select2("data")[0];
-    loadFullForm(selection).catch((error) => {
-        showErrorAlert(form, error);
-    });
-}
+initMultiSelects();
 
-function initSearch() {
-    document.querySelector("form.edit").addEventListener("submit", search);
-}
-
-// TODO: entering a new person with same name as existing entry must be possible
-$("#name").select2({
-    tags: true,
-    width: "100%",
-    debug: true,
-});
-
-initSearch();
+const form = document.querySelector("form.edit");
+form.addEventListener("submit", edit);

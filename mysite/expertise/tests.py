@@ -299,7 +299,7 @@ class EditTestCase(TestCase):
         person1.wanted_expertise.connect(wanted_exp)
         person1.advisors.connect(person2)
 
-        response = self.client.get("/expertise/edit-form?id=" + person1.pk)
+        response = self.client.get("/expertise/edit?person=" + person1.pk)
         form = response.context["form"]
         self.assertEqual(form.initial["email"], "a@a.com")
         self.assertEqual(form.initial["title"], "title")
@@ -311,6 +311,13 @@ class EditTestCase(TestCase):
         self.assertEqual(form.initial["roles"], [role.pk])
         self.assertEqual(form.initial["offered"], [offered_exp.pk])
         self.assertEqual(form.initial["wanted"], [wanted_exp.pk])
+
+    def test_initial_form_values_new_person(self):
+        """test that only the name is filled in if no existing person was selected"""
+        response = self.client.get("/expertise/edit?person=Hans")
+        form = response.context["form"]
+        self.assertEqual(form.initial["name"], "Hans")
+        self.assertEqual(len(form.initial), 1)
 
     def test_required_email(self):
         data = {
@@ -339,6 +346,7 @@ class EditTestCase(TestCase):
         self.assertFalse(form.errors)
 
     def test_form_no_relation_changes(self):
+        """test that no relationships were changed"""
         self.user.groups.add(self.group)
         self.client.login(username=self.user.username, password=self.password)
         # nodes
@@ -361,7 +369,7 @@ class EditTestCase(TestCase):
             "offered": [offered_exp.pk],
             "wanted": [wanted_exp.pk],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
 
         submission = get_submission_from_person_id(person1.pk)
         submission_data = get_post_data(submission, "approve")
@@ -394,7 +402,7 @@ class EditTestCase(TestCase):
             "offered": [offered_exp.pk, unconnected_exp.pk],
             "wanted": ["new exp"],
         }
-        response = self.client.post("/expertise/edit-form", post_data)
+        response = self.client.post("/expertise/edit", post_data)
 
         submission = get_submission_from_person_id(person.pk)
         submission_data = get_post_data(submission, "approve")
@@ -410,7 +418,7 @@ class EditTestCase(TestCase):
         self.assertEqual(wanted[0].name, "new exp")
         self.assertEqual(response.status_code, 200)
 
-        get_response = self.client.get("/expertise/edit-form?id=" + person.pk)
+        get_response = self.client.get("/expertise/edit?person=" + person.pk)
         form = get_response.context["form"]
         # test that the select options in the form were updated
         expertise_options = [x for x, _ in form.fields["wanted"].choices]
@@ -426,7 +434,7 @@ class EditTestCase(TestCase):
             "email": "a@a.com",
             "offered": ["new expertise"],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
 
         submission = get_submission_from_person_email("a@a.com", "new person")
         submission_data = get_post_data(submission, "approve")
@@ -437,6 +445,7 @@ class EditTestCase(TestCase):
         self.assertEqual(person.offered_expertise.all()[0].name, "new expertise")
 
     def test_duplicate_email(self):
+        """test that edit submissions can't be submitted for an existing email from another person"""
         Person(name="ash", email="a@a.com").save()
         person2 = Person(name="rock", email="b@b.com").save()
 
@@ -445,7 +454,7 @@ class EditTestCase(TestCase):
             "name": "new name",
             "email": "a@a.com",
         }
-        response = self.client.post("/expertise/edit-form", post_data)
+        response = self.client.post("/expertise/edit", post_data)
         self.assertEqual(response.status_code, 422)
         self.assertIn("property `email`", response.json()["email"][0]["message"])
 
@@ -454,11 +463,12 @@ class EditTestCase(TestCase):
             "name": person2.name,
             "email": "a@a.com",
         }
-        response = self.client.post("/expertise/edit-form", post_data)
+        response = self.client.post("/expertise/edit", post_data)
         self.assertEqual(response.status_code, 422)
         self.assertIn("property `email`", response.json()["email"][0]["message"])
 
     def test_entity_name_restrictions(self):
+        """test that entity names are processed correctly, e.g. trimmed whitespace"""
         # TODO: extend tests if more restrictions are introduced
         self.user.groups.add(self.group)
         self.client.login(username=self.user.username, password=self.password)
@@ -469,7 +479,7 @@ class EditTestCase(TestCase):
             "email": person.email,
             "offered": [" new expertise "],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
 
         submission = get_submission_from_person_id(person.pk)
         submission_data = get_post_data(submission, "approve")
@@ -482,13 +492,14 @@ class EditTestCase(TestCase):
         post_data = {
             "personId": "person name",
         }
-        response = self.client.post("/expertise/edit-form", post_data)
+        response = self.client.post("/expertise/edit", post_data)
         self.assertEqual(response.status_code, 422)
         self.assertEqual(response.json()["name"][0]["message"], "This field is required.")
         self.assertEqual(response.json()["email"][0]["message"], "This field is required.")
         self.assertEqual(len(response.json()), 2)
 
     def test_new_person_rejected(self):
+        """test that creation of a person is rejected and creation of another is accepted"""
         self.user.groups.add(self.group)
         self.client.login(username=self.user.username, password=self.password)
         post_data = {
@@ -497,14 +508,14 @@ class EditTestCase(TestCase):
             "email": "a@a.com",
             "offered": ["new expertise"],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
         post_data = {
             "personId": "",
             "name": "other name",
             "email": "b@b.com",
             "offered": ["other expertise"],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
 
         submission = get_submission_from_person_email("a@a.com", "new person")
         submission_data = get_post_data(submission, "reject")
@@ -519,6 +530,10 @@ class EditTestCase(TestCase):
         self.assertEqual(Person.nodes.all()[0].email, "b@b.com")
 
     def test_duplicate_entity_name(self):
+        """
+        test that edit submission that has multiple entities with same name only creates
+        one entity per unique name
+        """
         self.user.groups.add(self.group)
         self.client.login(username=self.user.username, password=self.password)
         interest = ResearchInterest(name="new interest").save()
@@ -531,7 +546,7 @@ class EditTestCase(TestCase):
             "institutes": ["new institute", institute.pk],
             "offered": ["new expertise", "new expertise"],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
 
         submission = get_submission_from_person_email("a@a.com", "new person")
         submission_data = get_post_data(submission, "approve")
@@ -603,7 +618,7 @@ class EditSubmissionTestCase(TestCase):
             "email": person.email,
             "title": "new title",
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
         submission = get_submission_or_none(person)
         self.assertIsNotNone(submission)
 
@@ -615,11 +630,12 @@ class EditSubmissionTestCase(TestCase):
             "email": "b@b.com",
             "title": "new title",
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
         submission = get_submission_or_none(person)
         self.assertIsNotNone(submission)
 
     def test_get_submission_new_person(self):
+        """test that an edit submission for a new person is saved"""
         name = "Jake"
         email = "a@a.com"
         post_data = {
@@ -627,7 +643,7 @@ class EditSubmissionTestCase(TestCase):
             "name": name,
             "email": email,
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
         # person should not be saved
         person = Person(name=name, email=email)
         submission = get_submission_or_none(person)
@@ -769,6 +785,7 @@ class EditSubmissionTestCase(TestCase):
         self.assertEqual(len(submissions), 0)
 
     def test_change_existing_submission_new_person(self):
+        """test that an existing edit submission can be changed"""
         exp1 = Expertise(name="expertise").save()
         # new submission without saving nodes
         post_data = {
@@ -776,7 +793,7 @@ class EditSubmissionTestCase(TestCase):
             "email": "test@test.de",
             "offered": [exp1.pk, "exp2"],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
         self.assertEqual(len(Person.nodes.all()), 0)
         submission = EditSubmission.objects.first()
         self.assertCountEqual(submission.offered, [])
@@ -788,7 +805,7 @@ class EditSubmissionTestCase(TestCase):
             "email": "test@test.de",
             "offered": ["exp2"],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
         self.assertEqual(len(Person.nodes.all()), 0)
         submissions = EditSubmission.objects.all()
         self.assertEqual(len(submissions), 1)
@@ -797,18 +814,20 @@ class EditSubmissionTestCase(TestCase):
         self.assertCountEqual(submission.offered_new, ["exp2"])
 
     def test_save_submission_no_old_email(self):
+        """test edit submission for a person who didn't have an email set"""
         person = Person(name="Hans").save()
         post_data = {
             "personId": person.pk,
             "name": person.name,
             "email": "test@test.de",
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
         submission = EditSubmission.objects.first()
         self.assertEqual(submission.person_email, "")
         self.assertEqual(submission.person_email_new, "test@test.de")
 
     def test_get_submissions_data(self):
+        """test that the data to compare the edit submissions is correct"""
         person = Person(name="Jake", email="a@a.com").save()
         exp1 = Expertise(name="expertise").save()
         exp2 = Expertise(name="expertise 2").save()
@@ -820,7 +839,7 @@ class EditSubmissionTestCase(TestCase):
             "email": person.email,
             "offered": [exp1.pk, exp2.pk, "new expertise"],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
 
         post_data = {
             "personId": "",
@@ -828,7 +847,7 @@ class EditSubmissionTestCase(TestCase):
             "email": "test@test.de",
             "offered": ["expertise3"],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
 
         submissions = EditSubmission.objects.all().order_by("id")
         submissions_data = get_submissions_forms(submissions)
@@ -840,10 +859,17 @@ class EditSubmissionTestCase(TestCase):
         expertise_field_index = 9
         # index 0 is the new field
         self.assertCountEqual(submission_data1["data"][name_field_index][0].value(), person.name)
-        self.assertCountEqual(submission_data1["data"][expertise_field_index][0].value(), [exp1.pk, exp2.pk, "new expertise"])
+        self.assertCountEqual(
+            submission_data1["data"][expertise_field_index][0].value(),
+            [exp1.pk, exp2.pk, "new expertise"]
+        )
         self.assertCountEqual(submission_data1["data"][faculties_field_index][0].value(), [])
 
     def test_add_missing_choices(self):
+        """
+        test that the select options include the currently non-existent choices that
+        would be created if the edit request was accepted
+        """
         self.user.groups.add(self.group)
         self.client.login(username=self.user.username, password=self.password)
         person = Person(name="Jake", email="a@a.com").save()
@@ -854,7 +880,7 @@ class EditSubmissionTestCase(TestCase):
             "email": person.email,
             "offered": [exp1.pk, "new expertise1", "new expertise2"],
         }
-        self.client.post("/expertise/edit-form", post_data)
+        self.client.post("/expertise/edit", post_data)
 
         response = self.client.get("/expertise/approve")
         form_data = response.context["forms"][0]

@@ -525,16 +525,14 @@ def index(request):
     }
     return render(request, "expertise/index.html", context)
 
-def edit(request):
+def edit_selection(request):
     context = {
         "persons": Person.nodes.all(),
     }
-    # should I instead load the whole form in a single view and just have it hidden until searched?
-    # what are the downsides?
 
-    return render(request, "expertise/edit.html", context)
+    return render(request, "expertise/edit-select.html", context)
 
-def edit_form(request):
+def edit(request):
     errors = ErrorDict()
     if request.method == "POST":
         person_id = request.POST.get("personId")
@@ -590,15 +588,18 @@ def edit_form(request):
             return JsonResponse(errors, status=422)
 
         return JsonResponse({})
-    else:
-        person = Person.nodes.get_or_none(pk=request.GET.get("id"))
-        initial_data = get_person_data(person) if person else {}
-        form = EditForm(initial=initial_data)
+
+    # GET
+    person_value = request.GET.get("person") # pk or name
+    person = Person.nodes.get_or_none(pk=person_value)
+    # load form with the person's data if the person exists
+    initial_data = get_person_data(person) if person else { "name": person_value }
+    form = EditForm(initial=initial_data)
     context = {
         "form": form,
         "person_pk": person.pk if person else "",
     }
-    return render(request, "expertise/edit-form.html", context)
+    return render(request, "expertise/edit.html", context)
 
 @permission_required("expertise.change_editsubmission")
 def approve(request):

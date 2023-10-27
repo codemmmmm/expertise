@@ -36,7 +36,7 @@
                     </button>
                 </h3>
                 <label for="search-filter" class="form-label visually-hidden">Search and filter</label>
-                <select class="form-select search-filter" multiple="multiple" name="filters[]" autofocus autocomplete="off">
+                <select id="search-filter" class="form-select search-filter" multiple="multiple" name="filters[]" autofocus autocomplete="off">
                     <optgroup class="search" label="Search history"></optgroup>
                     {% for key, item in suggestions.items %}
                     <optgroup class="{{ item.class }}" label="{{ item.group_name }}">
@@ -88,6 +88,7 @@
                     <th scope="col" class="role">Role in ScaDS.AI</th>
                     <th scope="col" class="expertise">Offered Expertise</th>
                     <th scope="col" class="expertise">Wanted Expertise</th>
+                    <th scope="col"><span class="visually-hidden">Edit link</span></th>
                 </tr>
             </thead>
             <tbody>

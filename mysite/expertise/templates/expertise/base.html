@@ -44,7 +44,7 @@
                 <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
                     <div class="navbar-nav">
                         <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active" aria-current="page" {% else %} " {% endif %} href="/expertise">Home</a>
-                        <a class="nav-link {% if request.resolver_match.url_name == 'edit' %}active" aria-current="page" {% else %} " {% endif %} href="/expertise/edit">Edit</a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'edit' or request.resolver_match.url_name == 'edit-selection' %}active" aria-current="page" {% else %} " {% endif %} href="/expertise/edit-select">Edit</a>
                         {% if user.is_authenticated %}
                             <a class="nav-link {% if request.resolver_match.url_name == 'approve' %}active" aria-current="page" {% else %} " {% endif %} href="/expertise/approve">Approve</a>
                             <a class="nav-link {% if request.resolver_match.url_name == 'logout' %}active" aria-current="page" {% else %} " {% endif %} href="{% url 'logout' %}?next={{ request.path }}">Log out</a>
