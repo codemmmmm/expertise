@@ -5,6 +5,7 @@ from typing import Sequence
 from django.test import TestCase
 from django.contrib.auth.models import User, Group, Permission
 from django.http import QueryDict
+from django.forms.boundfield import BoundField
 from neomodel import db, clear_neo4j_database, install_all_labels
 
 from expertise.models import (
@@ -886,6 +887,15 @@ class EditSubmissionTestCase(TestCase):
 
     def test_get_submissions_data(self):
         """test that the data to compare the edit submissions is correct"""
+
+        def get_field_couple_by_name(
+                field_couples: list[tuple[BoundField, BoundField]],
+                name: str,
+            ) -> tuple[BoundField, BoundField]:
+            for couple in field_couples:
+                if couple[0].name == name:
+                    return couple
+
         person = Person(name="Jake", email="a@a.com").save()
         exp1 = Expertise(name="expertise").save()
         exp2 = Expertise(name="expertise 2").save()
@@ -913,17 +923,18 @@ class EditSubmissionTestCase(TestCase):
         submissions_data = get_submissions_forms(submissions)
         self.assertEqual(len(submissions_data), 2)
 
+        # first form couple data
         submission_data1 = submissions_data[0]
-        name_field_index = 0
-        faculties_field_index = 5
-        expertise_field_index = 9
-        # index 0 is the new field
-        self.assertCountEqual(submission_data1["data"][name_field_index][0].value(), person.name)
+        field_couples = submission_data1["data"]
+        name_field = get_field_couple_by_name(field_couples, "name")
+        self.assertEqual(name_field[0].value(), person.name)
+        offered_expertise_field = get_field_couple_by_name(field_couples, "offered")
         self.assertCountEqual(
-            submission_data1["data"][expertise_field_index][0].value(),
+            offered_expertise_field[0].value(),
             [exp1.pk, exp2.pk, "new expertise"]
         )
-        self.assertCountEqual(submission_data1["data"][faculties_field_index][0].value(), [])
+        faculties_field = get_field_couple_by_name(field_couples, "faculties")
+        self.assertCountEqual(faculties_field[0].value(), [])
 
     def test_add_missing_choices(self):
         """
