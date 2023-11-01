@@ -83,7 +83,8 @@ function hideErrorAlert(parent) {
 }
 
 /**
- * handles switching the clipboard image and info and writing to the clipboard
+ * handles switching the icons and info and writing to the clipboard.
+ * the button needs to have two svg children.
  * @param {HTMLButtonElement} button
  * @param {Function} getValue has to return a Promise resolving to a string
  */
@@ -93,8 +94,9 @@ function writeToClipboard(button, getValue) {
     }
     const startTitle = button.title;
     const endTitle = "Copied!";
-    const startImage = button.querySelector("svg.bi-clipboard2");
-    const endImage = button.querySelector("svg.bi-clipboard2-check");
+    const images = button.querySelectorAll("svg");
+    const startImage = images[0];
+    const endImage = images[1];
 
     // does the site always have permission to write to clipboard in a secure context?
     getValue()

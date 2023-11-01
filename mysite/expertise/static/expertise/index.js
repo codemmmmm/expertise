@@ -130,6 +130,7 @@ function loadSharedViewFromHtml() {
         sessionStorage.setItem("personData", JSON.stringify(searchData));
         updateTable(tableData, searchPhrases);
         document.querySelector(".persons-table-container").classList.remove("d-none");
+        document.querySelector("button.clipboard-button.filters").classList.remove("d-none");
     }
     initializeSelect2(false);
 
@@ -207,6 +208,8 @@ function searchAndUpdate(e) {
         sessionStorage.setItem("personData", JSON.stringify(searchData));
         updateTable(data.persons, searchPhrases);
         document.querySelector(".persons-table-container").classList.remove("d-none");
+        // to show it only after the first search
+        document.querySelector("button.clipboard-button.filters").classList.remove("d-none");
     });
 }
 
@@ -1184,6 +1187,7 @@ function initializeSelect2(addEvents) {
         maximumSelectionLength: 20,
         tokenSeparators: [","],
         allowClear: true,
+        selectionCssClass: "search-filter-select2",
         templateSelection: templateSelection,
         templateResult: templateResult,
         matcher: matcher,

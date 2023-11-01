@@ -26,6 +26,11 @@ form.home {
     width: min(100%, 700px);
 }
 
+/* just home page */
+span.search-filter-select2.select2-selection.select2-selection--multiple {
+    min-height: 4.1rem
+}
+
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
     color: inherit;
 }
