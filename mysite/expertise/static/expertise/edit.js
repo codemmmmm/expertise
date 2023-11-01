@@ -82,9 +82,9 @@ function copyPersonId(e) {
 
 function initCopyButton() {
     const clipboardEl = document.querySelector("button.clipboard-button");
-    const nameContainer = document.querySelector("#id_name").parentNode;
-    // move it to the name field
-    nameContainer.querySelector("label")
+    const firstInputContainer = document.querySelector("form.edit input:not([type='hidden']").parentNode;
+    // move it to the first field
+    firstInputContainer.querySelector("label")
         .insertAdjacentElement("afterend", clipboardEl);
     clipboardEl.classList.remove("d-none");
     clipboardEl.addEventListener("click", copyPersonId);
