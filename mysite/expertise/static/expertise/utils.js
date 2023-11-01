@@ -99,10 +99,16 @@ function writeToClipboard(button, getValue) {
     // does the site always have permission to write to clipboard in a secure context?
     getValue()
         .then((data) => {
-            navigator.clipboard.writeText(data);
+            if (window.isSecureContext) {
+                navigator.clipboard.writeText(data);
+            } else {
+                console.log(data);
+            }
         })
         .catch((error) => {
-            navigator.clipboard.writeText("");
+            if (window.isSecureContext) {
+                navigator.clipboard.writeText("");
+            }
             console.error(error);
         });
 
