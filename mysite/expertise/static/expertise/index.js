@@ -880,7 +880,7 @@ function appendEditCell(tableRow, person) {
     const container = document.createElement("td");
     tableRow.appendChild(container);
     const editLink = document.createElement("a");
-    editLink.classList.add("pe-2", "pb-2", "me-4");
+    editLink.classList.add("pe-2", "pb-2", "me-3");
     editLink.href = "edit?person=" + person.pk;
     editLink.target = "_blank";
     editLink.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">

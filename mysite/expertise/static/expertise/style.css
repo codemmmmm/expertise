@@ -41,6 +41,10 @@ div.content-no-scroll {
     height: 90vh;
 }
 
+table.table.persons-table {
+    overflow-x: clip;
+}
+
 table.table.persons-table th {
     position: sticky;
     top: 0;
