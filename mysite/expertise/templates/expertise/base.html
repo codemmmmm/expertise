@@ -52,6 +52,7 @@
                         {% else %}
                             <a class="nav-link {% if request.resolver_match.url_name == 'login' %}active" aria-current="page" {% else %} " {% endif %} href="{% url 'login' %}?next={{ request.path }}">Log in</a>
                         {% endif %}
+                        <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active" aria-current="page" {% else %} " {% endif %} href=" /expertise/about">About</a>
                     </div>
                 </div>
             </div>
