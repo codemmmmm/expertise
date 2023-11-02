@@ -46,6 +46,12 @@ div.content-no-scroll {
     height: 90vh;
 }
 
+.search-alert.white-alert.alert-success {
+    color: unset;
+    background-color: unset;
+    border-color: unset;
+}
+
 table.table.persons-table {
     overflow-x: clip;
 }

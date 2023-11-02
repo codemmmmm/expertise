@@ -325,7 +325,6 @@ function highlightSubstrings(node, mergedRanges) {
 function updateAlert(searchedLength, filteredLength) {
     const alertEl = document.querySelector(".search-alert");
     alertEl.classList.remove("d-none");
-    alertEl.classList.add("d-inline-block");
     if (searchedLength === null) {
         alertEl.textContent = "Search failed!";
         alertEl.classList.remove("alert-success");
