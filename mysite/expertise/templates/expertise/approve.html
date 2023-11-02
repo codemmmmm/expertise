@@ -13,7 +13,7 @@
     {% for form_couple in forms %}
     <div class="accordion-item">
         <h2 class="accordion-header" id="heading{{ form_couple.id }}">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ form_couple.id }}" aria-expanded="true" aria-controls="collapse{{ form_couple.id }}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ form_couple.id }}" aria-expanded="false" aria-controls="collapse{{ form_couple.id }}">
                 {% if form_couple.action == "delete" %}
                     <span class="text-decoration-line-through">{{ form_couple.header.1 }}</span>
                 {% else %}
