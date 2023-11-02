@@ -22,6 +22,10 @@ html, body {
     font-weight: 600;
 }
 
+.beta-tag {
+    vertical-align: super;
+}
+
 form.home {
     width: min(100%, 700px);
 }
