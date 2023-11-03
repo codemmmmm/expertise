@@ -140,7 +140,7 @@ class PersonApiTestCase(TestCase):
 
     def test_one_search_phrase(self):
         person1 = Person(title="Prof", name="Adviso", comment="I am hiring").save()
-        person2 = Person(name="Person").save()
+        person2 = Person(name="jake").save()
         department = Department(name="ZIH").save()
         offered = Expertise(name="Python").save()
         person1.offered_expertise.connect(offered)
@@ -153,6 +153,20 @@ class PersonApiTestCase(TestCase):
         person_data = data["persons"][0]
         self.assertEqual(person_data["offered"][0]["name"], "Python")
         self.assertEqual(person_data["person"]["name"], "Adviso")
+
+        # person's name is searched too
+        response = self.client.get("/expertise/persons?search=Adviso")
+        data = response.json()
+        self.assertEqual(len(data["persons"]), 1)
+        person_data = data["persons"][0]
+        self.assertEqual(person_data["person"]["name"], "Adviso")
+
+        # advisor's name is searched too
+        response = self.client.get("/expertise/persons?search=ake")
+        data = response.json()
+        self.assertEqual(len(data["persons"]), 1)
+        person_data = data["persons"][0]
+        self.assertEqual(person_data["person"]["name"], "jake")
 
     def test_no_parameter(self):
         person1 = Person(title="Prof", name="Adviso", comment="I am hiring").save()
@@ -182,8 +196,8 @@ class PersonApiTestCase(TestCase):
         data = response.json()
         self.assertEqual(len(data["persons"]), 1)
 
-        # search "hans" and "ZIH" but person name is ignored
-        response = self.client.get("/expertise/persons?search=hans&search=ZIH")
+        # search "hans" and "CIDS"
+        response = self.client.get("/expertise/persons?search=hans&search=CIDS")
         data = response.json()
         self.assertEqual(len(data["persons"]), 0)
 

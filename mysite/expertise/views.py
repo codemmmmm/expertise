@@ -163,8 +163,7 @@ def get_filtered_data(search_phrases: list[str]) -> list[dict]:
         # this doesn't search properties of persons and advisors because I think it's not useful
         query = (
             "MATCH (p:Person)--(n) "
-            "WHERE NOT n:Person "
-            "WITH p, COLLECT(n.name) AS names "
+            "WITH p, COLLECT(n.name) + p.name AS names "
             "WHERE ALL(phrase IN $searchPhrases WHERE ANY(name IN names WHERE toLower(name) CONTAINS phrase)) "
             "RETURN DISTINCT p;"
         )
