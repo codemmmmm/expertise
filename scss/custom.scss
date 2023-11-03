@@ -1,0 +1,17 @@
+// ScaDS.AI colors and other colors (?) taken from the scads.ai site's css
+// I don't actually use all of these
+$blue: #0074ac;
+$red: #e9515d;
+$orange: #fd7e15;
+$yellow: #ffcc00;
+$green: #71bd56;
+$teal: #009299;
+$cyan: #004b6f;
+
+$primary: $cyan;
+$secondary: $teal;
+
+$accordion-border-width: 2px;
+
+// only the actually used bootstrap components should be imported instead
+@import "../node_modules/bootstrap/scss/bootstrap";

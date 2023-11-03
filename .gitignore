@@ -1,3 +1,6 @@
+# npm
+node_modules/
+
 # for trying things
 try.py
 try_db.py

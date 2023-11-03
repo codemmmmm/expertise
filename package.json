@@ -1,0 +1,29 @@
+{
+  "name": "expertise-graph",
+  "version": "1.0.0",
+  "private": "true",
+  "description": "Website for visualizing expertise and more",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run css",
+    "css-compile": "sass --style compressed --no-source-map scss/custom.scss mysite/expertise/static/expertise/custom_bootstrap.css",
+    "css": "npm run css-compile"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/curious-broccoli/expertise.git"
+  },
+  "keywords": [
+    "knowledge-graph"
+  ],
+  "author": "Moritz Müller",
+  "license": "",
+  "bugs": {
+    "url": "https://github.com/curious-broccoli/expertise/issues"
+  },
+  "homepage": "https://github.com/curious-broccoli/expertise#readme",
+  "dependencies": {
+    "bootstrap": "^5.0.2",
+    "sass": "^1.69.5"
+  }
+}

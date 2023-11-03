@@ -1,22 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 
+{% load static %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <noscript>Please enable JavaScript!</noscript>
-    {% load static %}
     <link rel="shortcut icon" type="image/png" href="{% static 'expertise/favicon-32x32.png' %}" />
     <!-- jquery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"
         integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <!-- bootstrap with custom css -->
+    <link rel="stylesheet" href="{% static 'expertise/custom_bootstrap.css' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
         crossorigin="anonymous"></script>
     <!-- select2 -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
-        rel="stylesheet" />
+                rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- graph visualization -->
     <script src="https://cdn.jsdelivr.net/npm/@antv/g6@4.8.20/dist/g6.min.js"></script>
@@ -31,7 +33,7 @@
 <body>
     <div id="navbar">
         {% block navbar %}
-        <nav class="navbar navbar-expand-md px-md-5 navbar-dark bg-primary">
+        <nav class="navbar navbar-expand-md px-md-5 navbar-light shadow">
             <div class="container-fluid">
                 <a class="navbar-brand" href="/expertise">
                     <span class="text-uppercase">Expertise </span><span class="fs-6 beta-tag">beta</span>

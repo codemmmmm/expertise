@@ -183,6 +183,11 @@ for Apache 2.4, Java 11, Neo4j 4.4 on Ubuntu 22 and installing the project in /h
     to the admin page, create a group with permissions for edit submissions.
     Create users and assign that group so they can approve.
 
+# Build
+
+The css needs to be built when Bootstrap variables need to be changed. Install npm,
+the dependencies of the project and do `npm run build`.
+
 # Updating
 
 1. Stash changes if needed. Then get the changes with `git pull`.
