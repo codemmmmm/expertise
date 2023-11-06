@@ -31,7 +31,8 @@ html, body {
 }
 
 .beta-tag {
-    vertical-align: super;
+    top: -18px;
+    position: relative;
 }
 
 form.home {
