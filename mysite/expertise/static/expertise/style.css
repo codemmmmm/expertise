@@ -4,6 +4,10 @@
     color: rgba(0, 0, 0, 0.7);
 }
 
+.nav-link {
+    font-size: 1.2rem;
+}
+
 /* OTHER STYLES */
 
 :root {
