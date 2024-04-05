@@ -1,4 +1,4 @@
-# Expertise graph
+# Expertise graph now lives at https://gitlab.hrz.tu-chemnitz.de/living-lab/internals/expertise-graph
 
 Website for visualizing expertise and more
 
